@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>אזורים - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link active"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-map" style="color:#059669;"></i> ניהול אזורים גיאוגרפיים</div>
+      <button onclick="openAdd()" class="btn btn-primary btn-sm" id="addBtn"><i class="bi bi-plus"></i> אזור חדש</button>
+    </div>
+    <div id="page-content">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;" id="zonesGrid"></div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title">טבלת אזורים</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>צבע</th><th>שם אזור</th><th>קוד</th><th>תלמידים</th><th>קואורדינטות</th><th>פעולות</th></tr></thead>
+            <tbody id="zonesTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">אזור חדש</div>
+      <span class="modal-close" onclick="closeModal()"><i class="bi bi-x-lg"></i></span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">שם אזור *</label><input type="text" id="fName" class="form-control" placeholder="מרינה"></div>
+      <div class="form-group"><label class="form-label">קוד *</label><input type="text" id="fCode" class="form-control" placeholder="MARINA" style="text-transform:uppercase;"></div>
+      <div class="form-group"><label class="form-label">קו רוחב (Latitude)</label><input type="number" id="fLat" class="form-control" step="0.0001" placeholder="32.1650"></div>
+      <div class="form-group"><label class="form-label">קו אורך (Longitude)</label><input type="number" id="fLng" class="form-control" step="0.0001" placeholder="34.7950"></div>
+      <div class="form-group"><label class="form-label">צבע</label><input type="color" id="fColor" class="form-control" style="height:40px;" value="#3B82F6"></div>
+      <div class="form-group"><label class="form-label">תיאור</label><input type="text" id="fDesc" class="form-control" placeholder="תיאור קצר"></div>
+    </div>
+    <div id="modalAlert" style="display:none;" class="alert"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button onclick="closeModal()" class="btn btn-outline">ביטול</button>
+      <button onclick="saveZone()" class="btn btn-primary">שמור</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+const canEdit = Auth.hasRole('admin','manager');
+if (!canEdit) document.getElementById('addBtn').style.display='none';
+let editId=null, allZones=[];
+
+async function loadZones() {
+  allZones = await API.zones();
+  document.getElementById('zonesGrid').innerHTML = allZones.map(z=>`
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:20px;border-top:4px solid ${z.color||'#3b82f6'};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:16px;font-weight:700;">${z.name}</div>
+        <span style="background:${z.color||'#3b82f6'}20;color:${z.color||'#3b82f6'};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;">${z.code}</span>
+      </div>
+      <div style="font-size:36px;font-weight:800;color:${z.color||'#3b82f6'};">${z.student_count||0}</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:12px;">תלמידים</div>
+      ${z.description?`<div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">${z.description}</div>`:''}
+      ${z.latitude?`<div style="font-size:11px;color:#cbd5e1;">${z.latitude.toFixed(4)}, ${z.longitude.toFixed(4)}</div>`:''}
+      ${canEdit?`<button onclick="openEdit(${z.id})" class="btn btn-outline btn-sm" style="margin-top:12px;width:100%;"><i class="bi bi-pencil"></i> ערוך</button>`:''}
+    </div>
+  `).join('');
+
+  document.getElementById('zonesTable').innerHTML = allZones.map(z=>`
+    <tr>
+      <td><div style="width:24px;height:24px;border-radius:50%;background:${z.color||'#3b82f6'};border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div></td>
+      <td><strong>${z.name}</strong></td>
+      <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">${z.code}</code></td>
+      <td><strong>${z.student_count||0}</strong></td>
+      <td style="font-size:11px;color:#94a3b8;">${z.latitude?`${z.latitude.toFixed(4)}, ${z.longitude.toFixed(4)}`:'-'}</td>
+      <td>${canEdit?`<button onclick="openEdit(${z.id})" class="btn btn-outline btn-sm"><i class="bi bi-pencil"></i></button>`:''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAdd() { editId=null; document.getElementById('modalTitle').textContent='אזור חדש'; clearForm(); document.getElementById('modal').style.display='flex'; }
+function openEdit(id) {
+  const z=allZones.find(z=>z.id===id); if(!z) return;
+  editId=id; document.getElementById('modalTitle').textContent='עריכת אזור';
+  document.getElementById('fName').value=z.name||'';
+  document.getElementById('fCode').value=z.code||'';
+  document.getElementById('fLat').value=z.latitude||'';
+  document.getElementById('fLng').value=z.longitude||'';
+  document.getElementById('fColor').value=z.color||'#3B82F6';
+  document.getElementById('fDesc').value=z.description||'';
+  document.getElementById('modal').style.display='flex';
+}
+function clearForm(){['fName','fCode','fLat','fLng','fDesc'].forEach(id=>document.getElementById(id).value='');document.getElementById('fColor').value='#3B82F6';}
+function closeModal(){document.getElementById('modal').style.display='none';}
+
+async function saveZone() {
+  const name=document.getElementById('fName').value.trim(),code=document.getElementById('fCode').value.trim().toUpperCase();
+  if(!name||!code){const el=document.getElementById('modalAlert');el.className='alert alert-danger';el.textContent='שם וקוד חובה';el.style.display='block';return;}
+  const data={name,code,latitude:parseFloat(document.getElementById('fLat').value)||null,longitude:parseFloat(document.getElementById('fLng').value)||null,color:document.getElementById('fColor').value,description:document.getElementById('fDesc').value};
+  try {
+    if(editId) await API.updateZone(editId,data); else await API.createZone(data);
+    closeModal(); loadZones(); toast(editId?'✅ אזור עודכן':'✅ אזור נוסף');
+  } catch(err){const el=document.getElementById('modalAlert');el.className='alert alert-danger';el.textContent='❌ '+err.message;el.style.display='block';}
+}
+
+loadZones();
+</script>
+</body>
+</html>

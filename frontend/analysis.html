@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניתוח WhatsApp - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.edit-input { width:100%; padding:4px 8px; border:1px solid #93c5fd; border-radius:6px; font-family:inherit; font-size:13px; background:#eff6ff; }
+.edit-textarea { width:100%; padding:6px 8px; border:1px solid #93c5fd; border-radius:6px; font-family:inherit; font-size:13px; background:#eff6ff; min-height:60px; resize:vertical; }
+.tag-editable { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:14px; font-size:12px; margin:2px; }
+.tag-del { cursor:pointer; opacity:0.6; font-size:10px; }
+.tag-del:hover { opacity:1; }
+.edit-mode-active .view-only { display:none; }
+.edit-mode-active .edit-only { display:block !important; }
+.edit-only { display:none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link active"><i class="bi bi-robot"></i> ניתוח WhatsApp</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-robot" style="color:#7c3aed;"></i> ניתוח WhatsApp הורים | Claude AI</div>
+      <span id="userBadge" style="font-size:13px;color:#64748b;"></span>
+    </div>
+
+    <div id="page-content">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- LEFT: Input + History -->
+        <div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-chat-dots" style="color:#7c3aed;"></i> הדבק טקסט WhatsApp לניתוח</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">תאריך שבוע</label>
+                <input type="date" id="weekDate" class="form-control">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">מספר שבוע (W-)</label>
+                <input type="number" id="weekNumber" class="form-control" placeholder="22" min="1">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">קו (אופציונלי)</label>
+              <select id="lineSelect" class="form-control">
+                <option value="">כל הקווים</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">הדבק טקסט חופשי — כל פורמט מתקבל</label>
+              <textarea id="whatsappText" class="form-control" rows="10"
+                placeholder="הדבק כאן את הודעות WhatsApp בכל פורמט:
+
+• [5/27/2026 ,08:59] ערן ראובני: האוטובוס היה מלא
+• 27/05/2026, 08:59 - ערן: תודה, שירות מצוין!
+• או אפילו טקסט חופשי:
+  האוטובוס איחר היום
+  ההורים מרוצים מהשירות
+  יש בעיה בתחנת המרינה"></textarea>
+            </div>
+
+            <div id="analyzeAlert" style="display:none;" class="alert"></div>
+            <button onclick="runAnalysis()" id="analyzeBtn" class="btn btn-primary" style="width:100%;">
+              <i class="bi bi-robot"></i> הפעל ניתוח Claude AI
+            </button>
+            <div style="margin-top:6px;font-size:11px;color:#94a3b8;text-align:center;">
+              ⚡ Claude מנתח כל טקסט — לא נדרש פורמט מסוים
+            </div>
+          </div>
+
+          <!-- History -->
+          <div class="card">
+            <div class="card-title"><i class="bi bi-clock-history" style="color:#64748b;"></i> ניתוחים קודמים</div>
+            <div id="historyList" style="max-height:320px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Results -->
+        <div>
+          <!-- Placeholder -->
+          <div class="card" id="placeholderCard">
+            <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+              <div style="font-size:48px;margin-bottom:16px;">🤖</div>
+              <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Claude מוכן לניתוח</div>
+              <div style="font-size:13px;">הדבק טקסט משמאל — כל פורמט, כל שפה</div>
+            </div>
+          </div>
+
+          <!-- Results Card -->
+          <div class="card" id="resultCard" style="display:none;">
+            <!-- Header with actions -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <div class="card-title" style="margin-bottom:0;"><i class="bi bi-clipboard-data" style="color:#16a34a;"></i> תוצאות ניתוח</div>
+              <div style="display:flex;gap:6px;">
+                <span id="weekLabel" style="background:#1e3a8a;color:white;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;"></span>
+                <button onclick="toggleEdit()" id="editBtn" class="btn btn-outline btn-sm"><i class="bi bi-pencil"></i> ערוך</button>
+                <button onclick="saveEdit()" id="saveBtn" class="btn btn-success btn-sm" style="display:none;"><i class="bi bi-check-lg"></i> שמור שינויים</button>
+                <button onclick="cancelEdit()" id="cancelBtn" class="btn btn-outline btn-sm" style="display:none;">ביטול</button>
+              </div>
+            </div>
+
+            <!-- Score -->
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:14px;background:#f8fafc;border-radius:10px;">
+              <div id="scoreCircle" class="score-circle"></div>
+              <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <span id="satisfactionText" style="font-size:17px;font-weight:700;"></span>
+                  <!-- Edit: NPS -->
+                  <div class="edit-only" style="display:flex;gap:6px;align-items:center;">
+                    <input type="number" id="editNps" class="edit-input" style="width:70px;" min="1" max="5" step="0.1">
+                    <select id="editLevel" class="edit-input" style="width:130px;">
+                      <option value="critical">קריטי</option>
+                      <option value="developing">מתפתח</option>
+                      <option value="good">טוב</option>
+                      <option value="excellent">מצוין</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="summaryTextView" class="view-only" style="font-size:13px;color:#64748b;line-height:1.5;"></div>
+                <textarea id="editSummary" class="edit-textarea edit-only" rows="2"></textarea>
+              </div>
+            </div>
+
+            <!-- Sentiment -->
+            <div style="margin-bottom:14px;">
+              <div style="font-size:12px;color:#64748b;margin-bottom:4px;">פיצול סנטימנט:</div>
+              <div style="display:flex;height:14px;border-radius:6px;overflow:hidden;gap:1px;" id="sentimentBar"></div>
+              <div style="display:flex;gap:10px;font-size:11px;margin-top:3px;" id="sentimentLabels"></div>
+            </div>
+
+            <!-- Positive themes -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:6px;">✅ לשימור</div>
+              <div id="positiveThemesView" class="view-only"></div>
+              <div id="editPositive" class="edit-only">
+                <div id="posTagsEdit" style="margin-bottom:4px;"></div>
+                <div style="display:flex;gap:4px;">
+                  <input type="text" id="newPosTag" class="edit-input" placeholder="הוסף נושא..." style="flex:1;">
+                  <button onclick="addTag('pos')" class="btn btn-outline btn-sm">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Negative themes -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:6px;">⚠️ לשיפור</div>
+              <div id="negativeThemesView" class="view-only"></div>
+              <div id="editNegative" class="edit-only">
+                <div id="negTagsEdit" style="margin-bottom:4px;"></div>
+                <div style="display:flex;gap:4px;">
+                  <input type="text" id="newNegTag" class="edit-input" placeholder="הוסף נושא..." style="flex:1;">
+                  <button onclick="addTag('neg')" class="btn btn-outline btn-sm">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px;">💡 המלצות</div>
+              <div id="recsView" class="view-only"></div>
+              <div id="editRecs" class="edit-only">
+                <div id="recsEditList"></div>
+                <div style="display:flex;gap:4px;margin-top:4px;">
+                  <input type="text" id="newRec" class="edit-input" placeholder="הוסף המלצה...">
+                  <button onclick="addRec()" class="btn btn-outline btn-sm">+</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tasks -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px;">📋 משימות שנוצרו</div>
+              <div id="tasksView"></div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid #e2e8f0;">
+              <button onclick="generateReport()" id="reportBtn" class="btn btn-success btn-sm">
+                <i class="bi bi-file-earmark-text"></i> צור דוח
+              </button>
+              <a href="tasks.html" class="btn btn-outline btn-sm"><i class="bi bi-check2-square"></i> צפה במשימות</a>
+              <a href="reports.html" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i> כל הדוחות</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/i18n.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+document.getElementById('userBadge').textContent = Auth.getUser()?.full_name || '';
+document.getElementById('weekDate').value = new Date().toISOString().split('T')[0];
+const canEdit = Auth.hasRole('admin', 'manager');
+
+let currentResult = null;
+let currentWeekDate = null;
+let editPosTags = [], editNegTags = [], editRecsList = [];
+let isEditing = false;
+
+// Load lines
+API.lines().then(lines => {
+  lines.filter(l => l.status === 'active').forEach(l => {
+    const opt = new Option(l.name, l.id);
+    document.getElementById('lineSelect').appendChild(opt);
+  });
+});
+
+async function loadHistory() {
+  const history = await API.analysisHistory();
+  // מסנן רק ניתוחים עם מספר שבוע ו-NPS
+  const valid = (history || []).filter(h => h.week_number && h.nps_score);
+  document.getElementById('historyList').innerHTML = valid.map(h => `
+    <div style="padding:10px;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:flex-start;">
+      <div onclick="loadAnalysis('${h.week_date}')" style="flex:1;cursor:pointer;"
+           onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;font-size:13px;">
+            <span style="background:#1e3a8a;color:white;padding:1px 6px;border-radius:4px;font-size:11px;margin-left:6px;">W-${h.week_number}</span>
+            ${formatDate(h.week_date)}
+          </span>
+          <span class="nps-badge ${npsStyle(h.nps_score)}">${parseFloat(h.nps_score).toFixed(2)}</span>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${(h.summary_hebrew||'').substring(0,65)}${h.summary_hebrew?.length>65?'...':''}</div>
+      </div>
+      ${canEdit ? `<button onclick="deleteAnalysis('${h.week_date}',${h.week_number})"
+        style="background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0;"
+        title="מחק ניתוח זה"><i class="bi bi-trash"></i></button>` : ''}
+    </div>
+  `).join('') || '<div style="text-align:center;color:#94a3b8;padding:20px;">אין ניתוחים עדיין</div>';
+}
+
+async function deleteAnalysis(weekDate, weekNum) {
+  if (!confirm(`למחוק את ניתוח שבוע W-${weekNum}?\nניתן לנתח מחדש לאחר מחיקה.`)) return;
+  try {
+    await API.del(`/analysis/week/${weekDate}`);
+    if (currentWeekDate === weekDate) {
+      document.getElementById('resultCard').style.display = 'none';
+      document.getElementById('placeholderCard').style.display = 'block';
+      currentWeekDate = null;
+    }
+    loadHistory();
+    showAlert(`✅ ניתוח W-${weekNum} נמחק`, 'success');
+  } catch (err) { showAlert('❌ ' + err.message, 'danger'); }
+}
+loadHistory();
+
+async function runAnalysis() {
+  const text = document.getElementById('whatsappText').value.trim();
+  const weekDate = document.getElementById('weekDate').value;
+  const weekNumber = document.getElementById('weekNumber').value;
+  const lineId = document.getElementById('lineSelect').value;
+
+  if (!weekDate) { showAlert('יש לבחור תאריך שבוע', 'warning'); return; }
+  if (!text || text.length < 10) { showAlert('יש להדביק טקסט (לפחות 10 תווים)', 'warning'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Claude מנתח...';
+  showAlert('', '');
+
+  try {
+    const result = await API.analyzeText({
+      text, week_date: weekDate,
+      week_number: weekNumber ? parseInt(weekNumber) : null,
+      line_id: lineId || null
+    });
+    currentWeekDate = weekDate;
+    displayResults(result.result, weekDate, weekNumber);
+    showAlert(`✅ ניתוח הושלם!`, 'success');
+    loadHistory();
+  } catch (err) {
+    showAlert(`❌ ${err.message}`, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-robot"></i> הפעל ניתוח Claude AI';
+  }
+}
+
+async function loadAnalysis(weekDate) {
+  try {
+    const result = await API.getAnalysis(weekDate);
+    currentWeekDate = weekDate;
+    displayResults(result, weekDate, result.week_number);
+  } catch (err) { showAlert(err.message, 'danger'); }
+}
+
+function displayResults(r, weekDate, weekNumber) {
+  currentResult = r;
+  document.getElementById('placeholderCard').style.display = 'none';
+  document.getElementById('resultCard').style.display = 'block';
+
+  const wn = weekNumber || r.week_number;
+  document.getElementById('weekLabel').textContent = wn ? `W-${wn}` : '';
+
+  const level = r.satisfaction_level || npsStyle(r.nps_score);
+  const scoreEl = document.getElementById('scoreCircle');
+  scoreEl.className = `score-circle score-${level}`;
+  scoreEl.innerHTML = `<span class="score-num">${parseFloat(r.nps_score||0).toFixed(1)}</span><span class="score-max">/5</span>`;
+
+  document.getElementById('satisfactionText').textContent = satisfactionLabel(level);
+  document.getElementById('summaryTextView').textContent = r.summary_hebrew || r.summary || '';
+  document.getElementById('editNps').value = r.nps_score || '';
+  document.getElementById('editSummary').value = r.summary_hebrew || r.summary || '';
+  for (const opt of document.getElementById('editLevel').options) {
+    opt.selected = opt.value === level;
+  }
+
+  // Sentiment
+  const sb = r.sentiment_breakdown || {};
+  const pos = sb.positive_percent || 0, neu = sb.neutral_percent || 0, neg = sb.negative_percent || 0;
+  document.getElementById('sentimentBar').innerHTML = `
+    <div style="width:${pos}%;background:#16a34a;" title="חיובי ${pos}%"></div>
+    <div style="width:${neu}%;background:#94a3b8;" title="נייטרלי ${neu}%"></div>
+    <div style="width:${neg}%;background:#dc2626;" title="שלילי ${neg}%"></div>`;
+  document.getElementById('sentimentLabels').innerHTML =
+    `<span style="color:#16a34a;">■ ${pos}% חיובי</span>
+     <span style="color:#94a3b8;">■ ${neu}% נייטרלי</span>
+     <span style="color:#dc2626;">■ ${neg}% שלילי</span>`;
+
+  // Themes
+  const positives = r.positive_themes || [];
+  const negatives = r.negative_themes || [];
+  editPosTags = [...positives];
+  editNegTags = [...negatives];
+
+  document.getElementById('positiveThemesView').innerHTML =
+    positives.map(t => `<span class="theme-tag theme-positive">${t}</span>`).join('') ||
+    '<span style="color:#94a3b8;font-size:12px;">לא זוהו</span>';
+  document.getElementById('negativeThemesView').innerHTML =
+    negatives.map(t => `<span class="theme-tag theme-negative">${t}</span>`).join('') ||
+    '<span style="color:#94a3b8;font-size:12px;">לא זוהו</span>';
+
+  // Recommendations
+  const recs = r.recommendations || [];
+  editRecsList = [...recs];
+  document.getElementById('recsView').innerHTML =
+    recs.map((rec, i) => `<div class="recommendation-item"><strong>${i+1}.</strong> ${rec}</div>`).join('') ||
+    '<div style="color:#94a3b8;font-size:12px;">אין המלצות</div>';
+
+  // Tasks
+  const tasks = r.tasks || [];
+  document.getElementById('tasksView').innerHTML = tasks.map(t => `
+    <div style="display:flex;gap:6px;align-items:center;padding:7px;background:#f8fafc;border-radius:6px;margin-bottom:5px;">
+      <span class="badge badge-${t.priority}">${t.priority==='high'?'דחוף':t.priority==='medium'?'בינוני':'נמוך'}</span>
+      <span style="background:${t.category==='שימור'?'#1e3a8a':'#dbeafe'};color:${t.category==='שימור'?'#fff':'#1d4ed8'};padding:1px 7px;border-radius:10px;font-size:11px;">${t.category||'שיפור'}</span>
+      <span style="flex:1;font-size:12px;">${t.title}</span>
+      <span style="font-size:11px;color:#94a3b8;">${t.stakeholder||''}</span>
+    </div>
+  `).join('') || '<div style="color:#94a3b8;font-size:12px;">אין משימות</div>';
+}
+
+// ============ EDIT MODE ============
+function toggleEdit() {
+  if (!canEdit) return;
+  isEditing = true;
+  document.getElementById('resultCard').classList.add('edit-mode-active');
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('saveBtn').style.display = 'inline-flex';
+  document.getElementById('cancelBtn').style.display = 'inline-flex';
+  renderTagsEdit();
+  renderRecsEdit();
+}
+
+function cancelEdit() {
+  isEditing = false;
+  document.getElementById('resultCard').classList.remove('edit-mode-active');
+  document.getElementById('editBtn').style.display = 'inline-flex';
+  document.getElementById('saveBtn').style.display = 'none';
+  document.getElementById('cancelBtn').style.display = 'none';
+  // Re-display from currentResult
+  if (currentResult) displayResults(currentResult, currentWeekDate, currentResult.week_number);
+}
+
+function renderTagsEdit() {
+  document.getElementById('posTagsEdit').innerHTML = editPosTags.map((t, i) =>
+    `<span class="tag-editable theme-positive">${t}<span class="tag-del" onclick="removeTag('pos',${i})">✕</span></span>`
+  ).join('');
+  document.getElementById('negTagsEdit').innerHTML = editNegTags.map((t, i) =>
+    `<span class="tag-editable theme-negative">${t}<span class="tag-del" onclick="removeTag('neg',${i})">✕</span></span>`
+  ).join('');
+}
+
+function renderRecsEdit() {
+  document.getElementById('recsEditList').innerHTML = editRecsList.map((r, i) => `
+    <div style="display:flex;gap:4px;margin-bottom:4px;align-items:center;">
+      <span style="color:#94a3b8;font-size:12px;">${i+1}.</span>
+      <input type="text" value="${r.replace(/"/g,'&quot;')}" oninput="editRecsList[${i}]=this.value" class="edit-input" style="flex:1;">
+      <span style="cursor:pointer;color:#dc2626;font-size:14px;" onclick="removeRec(${i})">✕</span>
+    </div>
+  `).join('');
+}
+
+function addTag(type) {
+  const input = document.getElementById(type === 'pos' ? 'newPosTag' : 'newNegTag');
+  const val = input.value.trim();
+  if (!val) return;
+  if (type === 'pos') editPosTags.push(val); else editNegTags.push(val);
+  input.value = '';
+  renderTagsEdit();
+}
+
+function removeTag(type, idx) {
+  if (type === 'pos') editPosTags.splice(idx, 1); else editNegTags.splice(idx, 1);
+  renderTagsEdit();
+}
+
+function addRec() {
+  const val = document.getElementById('newRec').value.trim();
+  if (!val) return;
+  editRecsList.push(val);
+  document.getElementById('newRec').value = '';
+  renderRecsEdit();
+}
+
+function removeRec(idx) {
+  editRecsList.splice(idx, 1);
+  renderRecsEdit();
+}
+
+async function saveEdit() {
+  if (!currentWeekDate) return;
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'שומר...';
+
+  try {
+    await API.put(`/analysis/week/${currentWeekDate}`, {
+      nps_score: parseFloat(document.getElementById('editNps').value),
+      satisfaction_level: document.getElementById('editLevel').value,
+      summary_hebrew: document.getElementById('editSummary').value,
+      positive_themes: editPosTags,
+      negative_themes: editNegTags,
+      recommendations: editRecsList
+    });
+
+    // Reload
+    const updated = await API.getAnalysis(currentWeekDate);
+    currentResult = updated;
+    cancelEdit();
+    showAlert('✅ השינויים נשמרו!', 'success');
+    loadHistory();
+  } catch (err) {
+    showAlert('❌ ' + err.message, 'danger');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> שמור שינויים';
+  }
+}
+
+async function generateReport() {
+  if (!currentWeekDate) return;
+  const btn = document.getElementById('reportBtn');
+  btn.disabled = true; btn.textContent = 'יוצר...';
+  try {
+    await API.generateReport(currentWeekDate);
+    showAlert('✅ הדוח נוצר! עבור לדוחות לצפייה.', 'success');
+  } catch (err) { showAlert('❌ ' + err.message, 'danger'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="bi bi-file-earmark-text"></i> צור דוח'; }
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('analyzeAlert');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (type === 'success') setTimeout(() => el.style.display = 'none', 5000);
+}
+</script>
+</body>
+</html>

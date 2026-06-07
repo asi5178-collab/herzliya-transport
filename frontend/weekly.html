@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>נסיעות שבועיות - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp</a>
+      <a href="weekly.html" class="nav-link active"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-calendar-week" style="color:#d97706;"></i> נסיעות שבועיות ומדד RUP</div>
+      <span id="userBadge" style="font-size:13px;color:#64748b;"></span>
+    </div>
+
+    <div id="page-content">
+
+      <!-- הוספת נתוני נסיעה -->
+      <div class="card">
+        <div class="card-title"><i class="bi bi-plus-circle" style="color:#16a34a;"></i> הוספת / עדכון נתוני נסיעה</div>
+        <div style="display:grid;grid-template-columns:160px 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">מספר שבוע (W-)</label>
+            <input type="number" id="rWeekNum" class="form-control" placeholder="22" min="1" max="52"
+                   oninput="autoShowDate(this.value)">
+            <small id="weekDateHint" style="color:#94a3b8;font-size:10px;margin-top:2px;display:block;"></small>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">קו</label>
+            <select id="rLine" class="form-control"></select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">נוסעים בפועל</label>
+            <input type="number" id="rActual" class="form-control" placeholder="27" min="0">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">סה"כ רשומים</label>
+            <input type="number" id="rRegistered" class="form-control" placeholder="478" min="1">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">קיבולת</label>
+            <input type="number" id="rCapacity" class="form-control" placeholder="50">
+          </div>
+
+          <button onclick="addRidership()" class="btn btn-success">
+            <i class="bi bi-plus"></i> הוסף
+          </button>
+        </div>
+        <div id="addResult" style="display:none;margin-top:12px;" class="alert"></div>
+      </div>
+
+      <!-- גרף RUP -->
+      <div class="card">
+        <div class="card-title"><i class="bi bi-graph-up"></i> גרף RUP לפי שבוע</div>
+        <div class="chart-wrapper"><canvas id="rupChart"></canvas></div>
+      </div>
+
+      <!-- טבלה עם מחיקה -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin-bottom:0;">פירוט לפי שבוע וקו</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="lineFilter" class="form-control" style="width:auto;" onchange="loadTable()">
+              <option value="">כל הקווים</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>שבוע</th><th>קו</th>
+                <th>נוסעים בפועל</th><th>סה"כ רשומים</th>
+                <th>RUP%</th><th>קיבולת</th><th>סטטוס</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody id="rupTable"></tbody>
+          </table>
+        </div>
+
+        <!-- מחיקת שבוע שלם -->
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;gap:8px;align-items:center;">
+          <span style="font-size:12px;color:#64748b;">מחיקת שבוע שלם:</span>
+          <input type="number" id="deleteWeekNum" class="form-control" placeholder="W-22" min="1" max="52"
+                 style="width:100px;">
+          <button onclick="deleteWeek()" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash"></i> מחק שבוע
+          </button>
+          <span style="font-size:11px;color:#94a3b8;">מוחק את כל הנתונים של השבוע לכל הקווים</span>
+        </div>
+      </div>
+
+      <!-- יעדי RUP -->
+      <div class="card">
+        <div class="card-title"><i class="bi bi-bullseye"></i> התקדמות ליעדי RUP</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" id="rupTargets"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/i18n.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+document.getElementById('userBadge').textContent = Auth.getUser()?.full_name || '';
+
+let allLines = [], chartInst = null;
+
+// חישוב תאריך ממספר שבוע (ISO)
+function weekNumToDate(weekNum, year = 2026) {
+  const jan4 = new Date(year, 0, 4);
+  const mon1 = new Date(jan4);
+  mon1.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
+  const d = new Date(mon1);
+  d.setDate(mon1.getDate() + (weekNum - 1) * 7);
+  return d.toISOString().split('T')[0];
+}
+
+function autoShowDate(wn) {
+  const hint = document.getElementById('weekDateHint');
+  if (wn >= 1 && wn <= 52) {
+    const d = weekNumToDate(parseInt(wn));
+    hint.textContent = `תאריך שני: ${formatDate(d)}`;
+  } else { hint.textContent = ''; }
+}
+
+async function init() {
+  allLines = await API.lines();
+  allLines.filter(l => l.status === 'active').forEach(l => {
+    document.getElementById('rLine').appendChild(new Option(l.name, l.id));
+    document.getElementById('lineFilter').appendChild(new Option(l.name, l.id));
+  });
+  await Promise.all([loadChart(), loadTable()]);
+  loadTargets();
+}
+
+async function loadChart() {
+  const data = await API.rupTrend();
+  const lineColors = {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6'};
+  const byCode = {};
+  const weekNums = [];
+  data.forEach(r => {
+    const lbl = `W-${r.week_number}`;
+    if (!byCode[r.code]) byCode[r.code] = {};
+    byCode[r.code][lbl] = parseFloat(r.rup_percent);
+    if (!weekNums.includes(lbl)) weekNums.push(lbl);
+  });
+  weekNums.sort((a,b) => parseInt(a.split('-')[1]) - parseInt(b.split('-')[1]));
+
+  const datasets = Object.entries(byCode).map(([code, vals]) => ({
+    label: allLines.find(l=>l.code===code)?.name || code,
+    data: weekNums.map(w => vals[w] ?? null),
+    borderColor: lineColors[code]||'#64748b',
+    backgroundColor: (lineColors[code]||'#64748b')+'25',
+    tension: 0.4, fill: true, pointRadius: 5, spanGaps: true
+  }));
+
+  const totalRup = await API.rupTotal();
+  datasets.push({
+    label: 'RUP כולל',
+    data: weekNums.map(w => {
+      const wNum = parseInt(w.split('-')[1]);
+      const found = totalRup.find(r => r.week_number === wNum);
+      return found ? parseFloat(found.total_rup) : null;
+    }),
+    borderColor: '#7c3aed', backgroundColor: 'transparent',
+    tension: 0.4, borderWidth: 3, pointRadius: 7, spanGaps: true,
+    pointStyle: 'rectRot'
+  });
+
+  datasets.push({label:'יעד Q2 (10%)',data:weekNums.map(()=>10),borderColor:'#f59e0b',borderDash:[5,5],pointRadius:0,borderWidth:1.5});
+  datasets.push({label:'יעד Q4 (30%)',data:weekNums.map(()=>30),borderColor:'#dc2626',borderDash:[5,5],pointRadius:0,borderWidth:1.5});
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById('rupChart'), {
+    type:'line', data:{ labels: weekNums, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 }, usePointStyle:true } } },
+      scales:{ y:{ beginAtZero:true, max:60, title:{ display:true, text:'RUP %' } } }
+    }
+  });
+}
+
+async function loadTable() {
+  const lineId = document.getElementById('lineFilter').value;
+  const data = await API.ridership(lineId ? { line_id: lineId } : {});
+
+  document.getElementById('rupTable').innerHTML = data.map(r => `
+    <tr>
+      <td><strong style="background:#1e3a8a;color:white;padding:2px 7px;border-radius:5px;font-size:12px;">W-${r.week_number||'?'}</strong></td>
+      <td><span style="background:${lc(r.line_code)}25;color:${lc(r.line_code)};padding:2px 8px;border-radius:10px;font-size:12px;">${r.line_name}</span></td>
+      <td><strong>${r.actual_riders}</strong></td>
+      <td>${r.registered_students}</td>
+      <td style="font-weight:700;color:${rupColor(r.rup_percent)};">${parseFloat(r.rup_percent).toFixed(1)}%</td>
+      <td>${r.capacity}</td>
+      <td>${rupBadge(r.rup_percent)}</td>
+      <td>
+        <button onclick="deleteRow(${r.id})" class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5;" title="מחק שורה זו">
+          <i class="bi bi-trash"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">אין נתונים</td></tr>';
+}
+
+function lc(code) { return {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6'}[code]||'#64748b'; }
+function rupBadge(rup) {
+  if (rup>=40) return '<span class="nps-badge excellent">מצוין ≥40%</span>';
+  if (rup>=25) return '<span class="nps-badge good">טוב 25-39%</span>';
+  if (rup>=10) return '<span class="nps-badge developing">מתפתח 10-24%</span>';
+  return '<span class="nps-badge critical">קריטי <10%</span>';
+}
+
+async function loadTargets() {
+  const total = await API.rupTotal();
+  const lastRup = total.length ? parseFloat(total[total.length-1].total_rup) : 0;
+  const targets = [
+    { label:'יעד Q2', target:10, icon:'🎯' },
+    { label:'יעד Q4', target:30, icon:'🏆' },
+    { label:'יעד שנה 2', target:40, icon:'🌟' }
+  ];
+  document.getElementById('rupTargets').innerHTML = targets.map(t => {
+    const pct = Math.min((lastRup/t.target)*100, 100);
+    const clr = pct>=100?'#16a34a':pct>=60?'#d97706':'#dc2626';
+    return `
+      <div style="text-align:center;padding:20px;background:#f8fafc;border-radius:10px;">
+        <div style="font-size:32px;margin-bottom:8px;">${t.icon}</div>
+        <div style="font-weight:700;font-size:15px;">${t.label}: ${t.target}%</div>
+        <div style="font-size:28px;font-weight:800;color:${clr};">${lastRup.toFixed(1)}%</div>
+        <div style="margin-top:8px;">
+          <div class="rup-gauge"><div class="rup-gauge-fill" style="width:${pct}%;background:${clr};"></div></div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px;">${pct.toFixed(0)}% מהיעד</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function addRidership() {
+  const wn      = document.getElementById('rWeekNum').value;
+  const line_id = document.getElementById('rLine').value;
+  const actual  = document.getElementById('rActual').value;
+  const reg     = document.getElementById('rRegistered').value;
+  const cap     = document.getElementById('rCapacity').value;
+
+  if (!wn)     { showResult('יש להזין מספר שבוע', 'danger'); return; }
+  if (!line_id){ showResult('יש לבחור קו', 'danger'); return; }
+  if (actual===''){ showResult('יש להזין נוסעים בפועל', 'danger'); return; }
+
+  try {
+    const result = await API.post('/weekly/ridership', {
+      week_number: parseInt(wn),
+      line_id: parseInt(line_id),
+      actual_riders: parseInt(actual),
+      registered_students: reg ? parseInt(reg) : null,
+      capacity: cap ? parseInt(cap) : null
+    });
+    showResult(
+      `✅ W-${wn} נשמר | נוסעים: ${result.actual} / ${result.registered} | RUP: ${parseFloat(result.rup_percent).toFixed(1)}%`,
+      'success'
+    );
+    loadChart(); loadTable(); loadTargets();
+    document.getElementById('rActual').value = '';
+  } catch (err) {
+    showResult('❌ ' + err.message, 'danger');
+  }
+}
+
+async function deleteRow(id) {
+  if (!confirm('למחוק שורה זו?')) return;
+  try {
+    await API.del(`/weekly/ridership/${id}`);
+    showResult('🗑️ נמחק', 'success');
+    loadChart(); loadTable(); loadTargets();
+  } catch (err) { showResult('❌ ' + err.message, 'danger'); }
+}
+
+async function deleteWeek() {
+  const wn = document.getElementById('deleteWeekNum').value;
+  if (!wn) { alert('הזן מספר שבוע למחיקה'); return; }
+  if (!confirm(`למחוק את כל נתוני שבוע W-${wn}?\nזה ימחק את כל הקווים של שבוע זה.`)) return;
+  try {
+    await API.del(`/weekly/ridership/week/${wn}`);
+    showResult(`✅ שבוע W-${wn} נמחק. כעת תוכל להזין מחדש.`, 'success');
+    document.getElementById('deleteWeekNum').value = '';
+    loadChart(); loadTable(); loadTargets();
+  } catch (err) { showResult('❌ ' + err.message, 'danger'); }
+}
+
+function showResult(msg, type) {
+  const el = document.getElementById('addResult');
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 6000);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דוחות - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link active"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-file-earmark-text" style="color:#16a34a;"></i> דוחות שבועיים</div>
+    </div>
+    <div id="page-content">
+      <!-- Generate report -->
+      <div class="card">
+        <div class="card-title"><i class="bi bi-magic" style="color:#7c3aed;"></i> יצירת דוח חדש עם Claude AI</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <select id="weekSelect" class="form-control" style="width:200px;"></select>
+          <button onclick="generateReport()" id="genBtn" class="btn btn-primary">
+            <i class="bi bi-robot"></i> צור דוח שבועי
+          </button>
+          <span style="font-size:12px;color:#94a3b8;">יוצר דוח מנהלים בעברית מתוך נתוני ניתוח קיים</span>
+        </div>
+        <div id="genAlert" style="display:none;margin-top:12px;" class="alert"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;">
+        <!-- Reports list -->
+        <div class="card">
+          <div class="card-title">דוחות קיימים</div>
+          <div id="reportsList" style="max-height:600px;overflow-y:auto;"></div>
+        </div>
+
+        <!-- Report view -->
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="card-title" style="margin-bottom:0;" id="reportViewTitle">בחר דוח</div>
+            <button onclick="printReport()" class="btn btn-outline btn-sm" id="printBtn" style="display:none;"><i class="bi bi-printer"></i> הדפס</button>
+          </div>
+          <div id="reportContent" style="min-height:200px;">
+            <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+              <div style="font-size:48px;margin-bottom:12px;">📄</div>
+              <div>בחר דוח מהרשימה או צור דוח חדש</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+const canGen = Auth.hasRole('admin','manager');
+
+async function init() {
+  const [weeks, reports] = await Promise.all([API.weeks(), API.reports()]);
+  const sel = document.getElementById('weekSelect');
+  sel.innerHTML = '<option value="">בחר שבוע...</option>';
+  weeks.forEach(w => sel.appendChild(new Option(`שבוע ${w.week_number} (${formatDate(w.week_date)})`, w.week_date)));
+  renderReportsList(reports);
+}
+
+function renderReportsList(reports) {
+  document.getElementById('reportsList').innerHTML = reports.length ? reports.map(r=>`
+    <div onclick="viewReport(${r.id})" style="padding:12px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <div style="font-weight:600;font-size:13px;">${r.title}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${formatDate(r.created_at)} | ${r.created_by_name||''}</div>
+    </div>
+  `).join('') : '<div style="text-align:center;color:#94a3b8;padding:30px;">אין דוחות עדיין</div>';
+}
+
+async function viewReport(id) {
+  const report = await API.report(id);
+  document.getElementById('reportViewTitle').textContent = report.title;
+  document.getElementById('printBtn').style.display='inline-flex';
+  document.getElementById('reportContent').innerHTML = `
+    <div id="printableReport" style="line-height:1.8;font-size:13px;white-space:pre-wrap;font-family:'Segoe UI',Arial,sans-serif;">
+${report.content_hebrew}
+    </div>
+  `;
+}
+
+async function generateReport() {
+  if (!canGen) return;
+  const week = document.getElementById('weekSelect').value;
+  if (!week) { showGenAlert('בחר שבוע', 'warning'); return; }
+  const btn = document.getElementById('genBtn');
+  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> יוצר דוח...';
+  showGenAlert('','');
+  try {
+    const result = await API.generateReport(week);
+    showGenAlert('✅ הדוח נוצר בהצלחה!', 'success');
+    document.getElementById('reportViewTitle').textContent = `דוח שבועי - ${formatDate(week)}`;
+    document.getElementById('printBtn').style.display='inline-flex';
+    document.getElementById('reportContent').innerHTML = `
+      <div id="printableReport" style="line-height:1.8;font-size:13px;white-space:pre-wrap;">${result.report}</div>
+    `;
+    const reports = await API.reports();
+    renderReportsList(reports);
+  } catch(err) {
+    showGenAlert('❌ ' + err.message, 'danger');
+  } finally {
+    btn.disabled=false; btn.innerHTML='<i class="bi bi-robot"></i> צור דוח שבועי';
+  }
+}
+
+function showGenAlert(msg, type) {
+  const el=document.getElementById('genAlert');
+  if(!msg){el.style.display='none';return;}
+  el.className=`alert alert-${type}`;el.textContent=msg;el.style.display='block';
+}
+
+function printReport() {
+  const content = document.getElementById('printableReport')?.innerHTML;
+  if (!content) return;
+  const win = window.open('','','width=800,height=600');
+  win.document.write(`<html dir="rtl"><head><style>body{font-family:'Segoe UI',Arial;line-height:1.8;padding:40px;direction:rtl;white-space:pre-wrap;}</style></head><body>${content}</body></html>`);
+  win.document.close(); win.print();
+}
+
+init();
+</script>
+</body>
+</html>

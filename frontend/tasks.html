@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>משימות - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.task-row {
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  border-bottom:1px solid #f1f5f9; transition:background .12s; cursor:pointer;
+}
+.task-row:hover { background:#f8fafc; }
+.task-row.done .task-title { text-decoration:line-through; color:#94a3b8; }
+
+.cat-badge {
+  padding:2px 9px; border-radius:12px; font-size:11px; font-weight:700;
+  white-space:nowrap; flex-shrink:0;
+}
+.cat-שיפור  { background:#dbeafe; color:#1d4ed8; }
+.cat-שימור  { background:#1e3a8a; color:#fff; }
+.cat-ביצוע  { background:#fef3c7; color:#92400e; }
+
+.week-badge {
+  background:#1e3a8a; color:#fff; border-radius:6px;
+  padding:2px 7px; font-size:11px; font-weight:700; flex-shrink:0;
+}
+
+.num-badge {
+  min-width:28px; height:28px; border-radius:6px;
+  background:#f1f5f9; color:#475569;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:700; flex-shrink:0;
+}
+
+.stakeholder-chip {
+  background:#f1f5f9; color:#475569;
+  padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;
+}
+
+.tab-btn {
+  padding:5px 14px; border-radius:20px; font-size:12px; cursor:pointer;
+  border:1px solid #e2e8f0; background:white; color:#64748b;
+  transition:all .15s; font-family:inherit; font-weight:500;
+}
+.tab-btn.active { background:#1e3a8a; color:white; border-color:#1e3a8a; }
+
+.stat-box {
+  text-align:center; padding:12px 20px; border-radius:10px; border:1px solid #e2e8f0; background:white;
+}
+.stat-num { font-size:26px; font-weight:800; line-height:1; }
+.stat-lbl { font-size:11px; color:#94a3b8; margin-top:2px; }
+
+.new-task-form {
+  background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px; margin-bottom:16px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link active"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-check2-square" style="color:#1e3a8a;"></i> ניהול משימות לפי בעלי עניין</div>
+      <span id="userBadge" style="font-size:13px;color:#64748b;"></span>
+    </div>
+
+    <div id="page-content">
+
+      <!-- Stats bar -->
+      <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;" id="statsBar">
+        <div class="stat-box"><div class="stat-num" id="stTotal">-</div><div class="stat-lbl">סה"כ</div></div>
+        <div class="stat-box"><div class="stat-num" id="stOpen" style="color:#dc2626;">-</div><div class="stat-lbl">פתוחות</div></div>
+        <div class="stat-box"><div class="stat-num" id="stDone" style="color:#16a34a;">-</div><div class="stat-lbl">הושלמו</div></div>
+        <div class="stat-box"><div class="stat-num" id="stShimur" style="color:#1e3a8a;">-</div><div class="stat-lbl">שימור</div></div>
+        <div class="stat-box"><div class="stat-num" id="stShipur" style="color:#1d4ed8;">-</div><div class="stat-lbl">שיפור</div></div>
+        <div class="stat-box"><div class="stat-num" id="stBitzua" style="color:#92400e;">-</div><div class="stat-lbl">ביצוע</div></div>
+        <div class="stat-box"><div class="stat-num" id="stOverdue" style="color:#f97316;">-</div><div class="stat-lbl">באיחור</div></div>
+      </div>
+
+      <!-- Filter bar -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+        <button class="tab-btn active" onclick="setFilter('all',this)">הכל</button>
+        <button class="tab-btn" onclick="setFilter('open',this)">פתוחות</button>
+        <button class="tab-btn" onclick="setFilter('done',this)">הושלמו</button>
+        <button class="tab-btn" onclick="setFilter('in_progress',this)">ביצוע</button>
+        <button class="tab-btn" onclick="setFilter('שיפור',this)">שיפור</button>
+        <button class="tab-btn" onclick="setFilter('שימור',this)">שימור</button>
+        <button class="tab-btn" onclick="setFilter('manual',this)">ידני</button>
+        <div style="margin-right:auto;display:flex;gap:6px;align-items:center;">
+          <select id="stakeFilter" class="form-control" style="width:160px;font-size:12px;" onchange="render()">
+            <option value="">כל בעלי העניין</option>
+          </select>
+          <button onclick="openAdd()" class="btn btn-primary btn-sm" id="addBtn"><i class="bi bi-plus"></i> משימה חדשה</button>
+        </div>
+      </div>
+
+      <!-- New task form (expandable) -->
+      <div class="new-task-form" id="addForm" style="display:none;">
+        <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:#166534;">+ משימה חדשה</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div><label class="form-label" style="font-size:11px;">תיאור</label><input type="text" id="fTitle" class="form-control" placeholder="כותרת המשימה..."></div>
+          <div><label class="form-label" style="font-size:11px;">פתיחה</label><input type="date" id="fOpen" class="form-control"></div>
+          <div><label class="form-label" style="font-size:11px;">🎯 יעד</label><input type="date" id="fDeadline" class="form-control"></div>
+          <div><label class="form-label" style="font-size:11px;">שבוע</label>
+            <select id="fWeekNum" class="form-control">
+              <option value="">--</option>
+              <option>W-18</option><option>W-19</option><option>W-20</option>
+              <option>W-21</option><option>W-22</option><option>W-23</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;">
+          <div><label class="form-label" style="font-size:11px;">בעל עניין</label>
+            <select id="fStake" class="form-control">
+              <option>ערן ראובני</option><option>חברת דברת</option>
+              <option>מועצת תלמידים</option><option>מנהל החינוך</option>
+              <option>הורים</option><option>נהג</option>
+            </select>
+          </div>
+          <div><label class="form-label" style="font-size:11px;">קטגוריה</label>
+            <select id="fCat" class="form-control">
+              <option value="שיפור">שיפור</option>
+              <option value="שימור">שימור</option>
+              <option value="ביצוע">ביצוע</option>
+            </select>
+          </div>
+          <div><label class="form-label" style="font-size:11px;">עדיפות</label>
+            <select id="fPri" class="form-control">
+              <option value="high">דחוף</option>
+              <option value="medium" selected>בינוני</option>
+              <option value="low">נמוך</option>
+            </select>
+          </div>
+          <div><label class="form-label" style="font-size:11px;">מקור</label>
+            <select id="fSrc" class="form-control">
+              <option value="manual">ידני</option>
+              <option value="analysis">ניתוח Claude</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="saveTask()" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> הוסף</button>
+            <button onclick="closeAdd()" class="btn btn-outline btn-sm">✕</button>
+          </div>
+        </div>
+        <div id="addAlert" style="display:none;margin-top:8px;" class="alert"></div>
+      </div>
+
+      <!-- Task list -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div id="taskList"></div>
+        <div id="emptyMsg" style="display:none;text-align:center;padding:40px;color:#94a3b8;">
+          <div style="font-size:32px;margin-bottom:8px;">✅</div>
+          <div>אין משימות בסינון זה</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Edit modal -->
+<div id="modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">עריכת משימה</div>
+      <span class="modal-close" onclick="closeModal()"><i class="bi bi-x-lg"></i></span>
+    </div>
+    <div class="form-group"><label class="form-label">כותרת</label><input type="text" id="mTitle" class="form-control"></div>
+    <div class="form-group"><label class="form-label">תיאור</label><textarea id="mDesc" class="form-control" rows="2"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-group"><label class="form-label">קטגוריה</label>
+        <select id="mCat" class="form-control">
+          <option>שיפור</option><option>שימור</option><option>ביצוע</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">בעל עניין</label>
+        <select id="mStake" class="form-control">
+          <option>ערן ראובני</option><option>חברת דברת</option>
+          <option>מועצת תלמידים</option><option>מנהל החינוך</option>
+          <option>הורים</option><option>נהג</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">סטטוס</label>
+        <select id="mStatus" class="form-control">
+          <option value="open">פתוח</option>
+          <option value="in_progress">בביצוע</option>
+          <option value="done">הושלם</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">עדיפות</label>
+        <select id="mPri" class="form-control">
+          <option value="high">דחוף</option>
+          <option value="medium">בינוני</option>
+          <option value="low">נמוך</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">יעד</label><input type="date" id="mDeadline" class="form-control"></div>
+      <div class="form-group"><label class="form-label">אחראי</label><input type="text" id="mAssignee" class="form-control"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:16px;">
+      <button onclick="deleteTask()" class="btn btn-danger btn-sm" id="delBtn"><i class="bi bi-trash"></i> מחק</button>
+      <div style="display:flex;gap:8px;">
+        <button onclick="closeModal()" class="btn btn-outline">ביטול</button>
+        <button onclick="updateTask()" class="btn btn-primary">שמור</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+const canEdit = Auth.hasRole('admin','manager');
+document.getElementById('userBadge').textContent = Auth.getUser()?.full_name || '';
+if (!canEdit) { document.getElementById('addBtn').style.display='none'; }
+
+let allTasks = [], currentFilter = 'all', editId = null;
+
+async function load() {
+  allTasks = await API.tasks();
+
+  // Populate stakeholder filter
+  const stakes = [...new Set(allTasks.map(t=>t.stakeholder).filter(Boolean))].sort();
+  const sel = document.getElementById('stakeFilter');
+  sel.innerHTML = '<option value="">כל בעלי העניין</option>';
+  stakes.forEach(s => sel.appendChild(new Option(s, s)));
+
+  updateStats();
+  render();
+}
+
+function updateStats() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('stTotal').textContent   = allTasks.length;
+  document.getElementById('stOpen').textContent    = allTasks.filter(t=>t.status!=='done').length;
+  document.getElementById('stDone').textContent    = allTasks.filter(t=>t.status==='done').length;
+  document.getElementById('stShimur').textContent  = allTasks.filter(t=>t.category==='שימור').length;
+  document.getElementById('stShipur').textContent  = allTasks.filter(t=>t.category==='שיפור').length;
+  document.getElementById('stBitzua').textContent  = allTasks.filter(t=>t.category==='ביצוע'||t.status==='in_progress').length;
+  document.getElementById('stOverdue').textContent = allTasks.filter(t=>t.deadline&&t.deadline<today&&t.status!=='done').length;
+}
+
+function getFiltered() {
+  const stakeF = document.getElementById('stakeFilter').value;
+  let tasks = allTasks;
+  if (stakeF) tasks = tasks.filter(t=>t.stakeholder===stakeF);
+  if (currentFilter === 'all')         return tasks;
+  if (currentFilter === 'open')        return tasks.filter(t=>t.status!=='done');
+  if (currentFilter === 'done')        return tasks.filter(t=>t.status==='done');
+  if (currentFilter === 'in_progress') return tasks.filter(t=>t.status==='in_progress');
+  if (currentFilter === 'manual')      return tasks.filter(t=>t.source==='manual');
+  // category filter (שיפור/שימור)
+  return tasks.filter(t=>t.category===currentFilter);
+}
+
+function render() {
+  const filtered = getFiltered();
+  const today = new Date().toISOString().split('T')[0];
+
+  if (!filtered.length) {
+    document.getElementById('taskList').innerHTML = '';
+    document.getElementById('emptyMsg').style.display = 'block';
+    return;
+  }
+  document.getElementById('emptyMsg').style.display = 'none';
+
+  // Group by stakeholder
+  const byStake = {};
+  filtered.forEach(t => {
+    const s = t.stakeholder || 'אחר';
+    if (!byStake[s]) byStake[s] = [];
+    byStake[s].push(t);
+  });
+
+  let html = '';
+  for (const [stake, tasks] of Object.entries(byStake)) {
+    html += `<div style="background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.04em;border-bottom:1px solid #e2e8f0;">${stake.toUpperCase()} <span style="font-weight:400;color:#94a3b8;">(${tasks.length})</span></div>`;
+    tasks.forEach(t => {
+      const overdue = t.deadline && t.deadline < today && t.status !== 'done';
+      const daysLeft = t.deadline ? Math.ceil((new Date(t.deadline) - new Date()) / 86400000) : null;
+      html += `
+      <div class="task-row ${t.status==='done'?'done':''}" onclick="${canEdit?`openEdit(${t.id})`:''}">
+        <div class="num-badge" style="${overdue?'background:#fee2e2;color:#dc2626;':''}">${daysLeft!==null?Math.abs(daysLeft):'-'}</div>
+        ${canEdit ? `<input type="checkbox" onclick="event.stopPropagation();quickDone(${t.id},this)" ${t.status==='done'?'checked':''} style="width:16px;height:16px;cursor:pointer;flex-shrink:0;">` : ''}
+        <div style="flex:1;min-width:0;">
+          <div class="task-title" style="font-size:13px;font-weight:${t.status!=='done'?'500':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.title}</div>
+          ${t.description?`<div style="font-size:11px;color:#94a3b8;margin-top:1px;">${t.description}</div>`:''}
+        </div>
+        <span class="cat-badge cat-${t.category||'שיפור'}">${t.category||'שיפור'}</span>
+        ${t.week_number?`<span class="week-badge">W-${t.week_number}</span>`:''}
+        <span class="stakeholder-chip">${t.stakeholder||''}</span>
+        ${t.deadline?`<span style="font-size:11px;color:${overdue?'#dc2626':'#94a3b8'};">${formatDate(t.deadline)}</span>`:''}
+        ${canEdit&&t.status!=='done'?`<button onclick="event.stopPropagation();quickDone(${t.id},null,true)" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">✓</button>`:''}
+      </div>`;
+    });
+  }
+
+  document.getElementById('taskList').innerHTML = html;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  render();
+}
+
+async function quickDone(id, cb, forceCheck) {
+  const checked = forceCheck || (cb && cb.checked);
+  await API.taskStatus(id, checked ? 'done' : 'open');
+  await load();
+  toast(checked ? '✅ משימה הושלמה' : 'פתיחה מחדש');
+}
+
+function openAdd() {
+  document.getElementById('addForm').style.display = 'block';
+  document.getElementById('fOpen').value = new Date().toISOString().split('T')[0];
+}
+function closeAdd() { document.getElementById('addForm').style.display = 'none'; }
+
+async function saveTask() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { showAddAlert('כותרת חובה','danger'); return; }
+  const wRaw = document.getElementById('fWeekNum').value;
+  const wNum = wRaw ? parseInt(wRaw.replace('W-','')) : null;
+  try {
+    await API.createTask({
+      title, priority: document.getElementById('fPri').value,
+      deadline: document.getElementById('fDeadline').value || null,
+      stakeholder: document.getElementById('fStake').value,
+      category: document.getElementById('fCat').value,
+      week_number: wNum,
+      source: document.getElementById('fSrc').value
+    });
+    closeAdd(); document.getElementById('fTitle').value = '';
+    await load(); toast('✅ משימה נוספה');
+  } catch(err) { showAddAlert('❌ '+err.message,'danger'); }
+}
+
+function showAddAlert(msg,type){const el=document.getElementById('addAlert');el.className=`alert alert-${type}`;el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+
+function openEdit(id) {
+  const t = allTasks.find(t=>t.id===id); if(!t) return;
+  editId = id;
+  document.getElementById('mTitle').value = t.title||'';
+  document.getElementById('mDesc').value = t.description||'';
+  document.getElementById('mDeadline').value = t.deadline||'';
+  document.getElementById('mAssignee').value = t.assignee||'';
+  setSelVal('mCat',t.category||'שיפור');
+  setSelVal('mStake',t.stakeholder||'ערן ראובני');
+  setSelVal('mStatus',t.status||'open');
+  setSelVal('mPri',t.priority||'medium');
+  document.getElementById('modal').style.display='flex';
+}
+
+function setSelVal(id,val){const el=document.getElementById(id);for(const o of el.options)if(o.value===val||o.text===val){o.selected=true;break;}}
+function closeModal(){document.getElementById('modal').style.display='none';}
+
+async function updateTask(){
+  try {
+    await API.updateTask(editId,{
+      title:document.getElementById('mTitle').value,
+      description:document.getElementById('mDesc').value,
+      priority:document.getElementById('mPri').value,
+      status:document.getElementById('mStatus').value,
+      deadline:document.getElementById('mDeadline').value,
+      assignee:document.getElementById('mAssignee').value,
+      stakeholder:document.getElementById('mStake').value,
+      category:document.getElementById('mCat').value
+    });
+    closeModal(); await load(); toast('✅ משימה עודכנה');
+  } catch(err){toast('❌ '+err.message,'danger');}
+}
+
+async function deleteTask(){
+  if(!confirm('למחוק משימה זו?')) return;
+  await API.del('/tasks/'+editId);
+  closeModal(); await load(); toast('🗑️ נמחקה');
+}
+
+load();
+</script>
+</body>
+</html>

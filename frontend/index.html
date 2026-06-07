@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דשבורד - מערכת הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="logo">
+      <div style="font-size:28px;">🚌</div>
+      <div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div>
+      <h6>מערכת ניהול תחבורה</h6>
+    </div>
+    <div style="padding:12px 0;">
+      <div class="nav-section">ניהול</div>
+      <a href="index.html" class="nav-link active"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+
+      <div class="nav-section">נתונים</div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווי הסעה</a>
+
+      <div class="nav-section">כלים</div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה ואופטימיזציה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+      <a href="admin.html" class="nav-link" id="adminLink" style="display:none;"><i class="bi bi-gear"></i> ניהול משתמשים</a>
+    </div>
+
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <div style="font-size:12px;opacity:0.6;margin-bottom:8px;" id="sidebarUser"></div>
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-box-arrow-left"></i> יציאה מהמערכת
+      </a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <!-- Topbar -->
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;color:#1e293b;">
+        <i class="bi bi-speedometer2" style="color:#3b82f6;"></i> לוח בקרה - מערכת הסעות הרצליה
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="weekBadge" style="background:#eff6ff;color:#1d4ed8;padding:4px 10px;border-radius:20px;font-size:12px;"></span>
+        <span id="userBadge" style="font-size:13px;color:#64748b;"></span>
+      </div>
+    </div>
+
+    <div id="page-content">
+      <!-- KPI Row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;" id="kpiRow">
+        <div class="kpi-card" id="kpiRup">
+          <div class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+          <div>
+            <div class="kpi-value" id="rupValue">--</div>
+            <div class="kpi-label">RUP שבוע אחרון</div>
+            <div class="rup-gauge"><div class="rup-gauge-fill" id="rupGauge" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="kpi-card green" id="kpiNps">
+          <div class="kpi-icon"><i class="bi bi-emoji-smile"></i></div>
+          <div>
+            <div class="kpi-value" id="npsValue">--</div>
+            <div class="kpi-label">NPS הורים (1-5)</div>
+            <span class="nps-badge" id="npsBadge">--</span>
+          </div>
+        </div>
+        <div class="kpi-card orange">
+          <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+          <div>
+            <div class="kpi-value" id="studentsValue">--</div>
+            <div class="kpi-label">תלמידים פעילים</div>
+            <div class="kpi-trend" id="ridersValue"></div>
+          </div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-icon"><i class="bi bi-exclamation-triangle"></i></div>
+          <div>
+            <div class="kpi-value" id="tasksValue">--</div>
+            <div class="kpi-label">משימות פתוחות</div>
+            <div class="kpi-trend" id="weeksValue"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div class="card">
+          <div class="card-title"><i class="bi bi-graph-up" style="color:#3b82f6;"></i> מגמת RUP שבועית (%)</div>
+          <div class="chart-wrapper"><canvas id="rupChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-heart-pulse" style="color:#16a34a;"></i> מגמת NPS הורים (1-5)</div>
+          <div class="chart-wrapper"><canvas id="npsChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Correlation + Tasks -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div class="card">
+          <div class="card-title"><i class="bi bi-scatter-chart" style="color:#7c3aed;"></i> קורלציה: RUP ↔ NPS</div>
+          <div class="chart-wrapper" style="height:220px;"><canvas id="corrChart"></canvas></div>
+          <div id="corrStats" style="margin-top:10px;font-size:12px;color:#64748b;text-align:center;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="bi bi-check2-square" style="color:#dc2626;"></i> משימות דחופות</div>
+          <div id="tasksList" style="max-height:220px;overflow-y:auto;"></div>
+          <a href="tasks.html" class="btn btn-outline btn-sm" style="margin-top:12px;width:100%;justify-content:center;">כל המשימות</a>
+        </div>
+      </div>
+
+      <!-- Weekly Summary Table -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div class="card-title" style="margin-bottom:0;"><i class="bi bi-table" style="color:#d97706;"></i> סיכום שבועי</div>
+          <a href="weekly.html" class="btn btn-outline btn-sm">כל הנתונים</a>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>שבוע</th><th>תאריך</th><th>נוסעים</th>
+                <th>RUP%</th><th>NPS</th><th>רמה</th><th>הודעות</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/i18n.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+
+const user = Auth.getUser();
+document.getElementById('sidebarUser').textContent = user?.full_name || '';
+document.getElementById('userBadge').textContent = user?.full_name || '';
+if (user?.role === 'admin') document.getElementById('adminLink').style.display = 'flex';
+
+const RUP_TARGETS = { q2: 10, q4: 30, year2: 40 };
+
+async function loadDashboard() {
+  try {
+    const [summary, rupTrend, npsTrend, corr, weekly, tasks] = await Promise.all([
+      API.summary(), API.rupTrend(), API.npsTrend(), API.correlation(), API.weeklySummary(), API.openTasks()
+    ]);
+
+    // KPIs
+    const rup = parseFloat(summary.current_rup || 0);
+    document.getElementById('rupValue').textContent = rup.toFixed(1) + '%';
+    document.getElementById('rupGauge').style.width = Math.min(rup * 2, 100) + '%';
+    document.getElementById('weekBadge').textContent = summary.last_week_number ? `W-${summary.last_week_number}` : '';
+
+    const nps = parseFloat(summary.current_nps || 0);
+    document.getElementById('npsValue').textContent = nps.toFixed(2);
+    const npsBadgeEl = document.getElementById('npsBadge');
+    const lvl = summary.satisfaction_level;
+    npsBadgeEl.className = `nps-badge ${lvl}`;
+    npsBadgeEl.textContent = satisfactionLabel(lvl);
+
+    document.getElementById('studentsValue').textContent = summary.total_students;
+    document.getElementById('ridersValue').textContent = `נסעו השבוע: ${summary.total_riders_last_week}`;
+    document.getElementById('tasksValue').textContent = summary.open_tasks;
+    document.getElementById('weeksValue').textContent = `${summary.weeks_tracked} שבועות במעקב`;
+
+    // RUP Chart — filter nulls, sort by week_number
+    const validRup = rupTrend.filter(r => r.week_number != null);
+    const rupWeekNums = [...new Set(validRup.map(r => r.week_number))].sort((a,b)=>a-b);
+    const rupLabels = rupWeekNums.map(w => `W-${w}`);
+
+    const rupByLine = {};
+    validRup.forEach(r => {
+      if (!rupByLine[r.code]) rupByLine[r.code] = {};
+      rupByLine[r.code][r.week_number] = parseFloat(r.rup_percent);
+    });
+    const lineColors = { '1A': '#3b82f6', '1B': '#10b981', '1C': '#8b5cf6' };
+    const rupDatasets = Object.keys(rupByLine).map(code => ({
+      label: `קו ${code}`,
+      data: rupWeekNums.map(w => rupByLine[code][w] ?? null),
+      borderColor: lineColors[code] || '#64748b',
+      backgroundColor: (lineColors[code] || '#64748b') + '20',
+      tension: 0.4, fill: true, pointRadius: 5, pointHoverRadius: 7, spanGaps: true
+    }));
+
+    // Add target lines
+    rupDatasets.push({ label: 'יעד Q2 (10%)', data: Array(rupLabels.length).fill(10), borderColor: '#f59e0b', borderDash: [5,5], pointRadius: 0, borderWidth: 1.5 });
+    rupDatasets.push({ label: 'יעד Q4 (30%)', data: Array(rupLabels.length).fill(30), borderColor: '#dc2626', borderDash: [5,5], pointRadius: 0, borderWidth: 1.5 });
+
+    new Chart(document.getElementById('rupChart'), {
+      type: 'line',
+      data: { labels: rupLabels, datasets: rupDatasets },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true } } }, scales: { y: { beginAtZero: true, max: 50, title: { display: true, text: 'RUP %' } } } }
+    });
+
+    // NPS Chart — filter null week_numbers
+    const validNps = npsTrend.filter(n => n.week_number != null && n.nps_score != null);
+    new Chart(document.getElementById('npsChart'), {
+      type: 'line',
+      data: {
+        labels: validNps.map(n => `W-${n.week_number}`),
+        datasets: [{
+          label: 'NPS הורים',
+          data: validNps.map(n => n.nps_score),
+          borderColor: '#16a34a', backgroundColor: '#16a34a20',
+          tension: 0.4, fill: true, pointRadius: 6, pointHoverRadius: 9,
+          pointBackgroundColor: validNps.map(n => {
+            if (n.nps_score >= 4) return '#16a34a';
+            if (n.nps_score >= 3.5) return '#2563eb';
+            if (n.nps_score >= 2.5) return '#d97706';
+            return '#dc2626';
+          })
+        }, {
+          label: 'סף טוב (3.5)',
+          data: Array(validNps.length).fill(3.5),
+          borderColor: '#d97706', borderDash: [5,5], pointRadius: 0, borderWidth: 1.5
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { y: { min: 1, max: 5, title: { display: true, text: 'NPS (1-5)' } } } }
+    });
+
+    // Correlation Scatter
+    if (corr.length > 1) {
+      const xs = corr.map(c => parseFloat(c.avg_rup));
+      const ys = corr.map(c => c.nps_score);
+      const n = xs.length;
+      const xMean = xs.reduce((a,b)=>a+b)/n, yMean = ys.reduce((a,b)=>a+b)/n;
+      const cov = xs.reduce((s,x,i) => s + (x-xMean)*(ys[i]-yMean), 0)/n;
+      const xStd = Math.sqrt(xs.reduce((s,x)=>s+(x-xMean)**2,0)/n);
+      const yStd = Math.sqrt(ys.reduce((s,y)=>s+(y-yMean)**2,0)/n);
+      const r = (cov/(xStd*yStd)).toFixed(3);
+
+      new Chart(document.getElementById('corrChart'), {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'RUP vs NPS',
+            data: corr.map(c => ({ x: parseFloat(c.avg_rup), y: c.nps_score, label: `W-${c.week_number}` })),
+            backgroundColor: '#3b82f680', pointRadius: 8, pointHoverRadius: 11
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => `${ctx.raw.label}: RUP=${ctx.raw.x}%, NPS=${ctx.raw.y}` } }
+          },
+          scales: {
+            x: { title: { display: true, text: 'RUP (%)' } },
+            y: { min: 1, max: 5, title: { display: true, text: 'NPS (1-5)' } }
+          }
+        }
+      });
+      document.getElementById('corrStats').innerHTML = `מקדם קורלציה פירסון: <strong>r = ${r}</strong> | ${Math.abs(r) > 0.6 ? '✅ קורלציה חזקה' : '⚠️ קורלציה חלשה'}`;
+    }
+
+    // Tasks
+    const tasksHtml = tasks.slice(0, 5).map(t => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f5f9;">
+        <span class="badge badge-${t.priority}">${t.priority === 'high' ? 'דחוף' : t.priority === 'medium' ? 'בינוני' : 'נמוך'}</span>
+        <span style="flex:1;font-size:13px;">${t.title}</span>
+        <span style="font-size:11px;color:#94a3b8;">${t.deadline ? formatDate(t.deadline) : ''}</span>
+      </div>
+    `).join('');
+    document.getElementById('tasksList').innerHTML = tasksHtml || '<div style="color:#94a3b8;text-align:center;padding:20px;">אין משימות פתוחות</div>';
+
+    // Weekly table — מסנן שבועות ללא NPS ומציג רק שבועות עם נתונים מלאים
+    const tblHtml = (weekly || [])
+      .filter(w => w.week_number)
+      .slice(0, 8)
+      .map(w => `
+      <tr>
+        <td><strong style="background:#1e3a8a;color:white;padding:2px 7px;border-radius:5px;font-size:12px;">W-${w.week_number}</strong></td>
+        <td>${formatDate(w.week_date)}</td>
+        <td>${w.total_riders || 0}</td>
+        <td style="color:${rupColor(w.avg_rup)};font-weight:600;">${parseFloat(w.avg_rup||0).toFixed(1)}%</td>
+        <td>${w.nps_score ? w.nps_score.toFixed(2) : '<span style="color:#e2e8f0;font-size:11px;">ממתין לניתוח</span>'}</td>
+        <td>${w.satisfaction_level ? `<span class="nps-badge ${w.satisfaction_level}">${satisfactionLabel(w.satisfaction_level)}</span>` : ''}</td>
+        <td>${w.message_count || ''}</td>
+      </tr>
+    `).join('');
+    document.getElementById('weeklyTable').innerHTML = tblHtml || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">אין נתונים עדיין</td></tr>';
+
+  } catch (err) {
+    console.error('שגיאה בטעינת דשבורד:', err);
+  }
+}
+
+loadDashboard();
+</script>
+</body>
+</html>

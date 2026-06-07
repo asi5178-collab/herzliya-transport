@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>כניסה - מערכת הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  body { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #0ea5e9 100%); }
+  .login-card { width: 420px; }
+  .city-badge { background: rgba(255,255,255,0.15); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; margin-bottom: 8px; }
+  .system-title { font-size: 22px; font-weight: 700; color: white; margin-bottom: 4px; }
+  .system-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 32px; }
+  .login-header { text-align: center; margin-bottom: 32px; }
+  .login-header .bus-icon { font-size: 48px; margin-bottom: 16px; }
+  .login-header h4 { font-weight: 700; color: #1e293b; }
+  .login-header p { color: #64748b; font-size: 13px; margin-top: 4px; }
+  .btn-login { width: 100%; padding: 12px; font-size: 15px; font-weight: 600; border-radius: 10px; background: linear-gradient(135deg, #1e40af, #3b82f6); border: none; color: white; cursor: pointer; margin-top: 8px; }
+  .btn-login:hover { opacity: 0.92; }
+  .input-icon-wrap { position: relative; }
+  .input-icon-wrap .bi { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+  .input-icon-wrap input { padding-right: 36px; }
+</style>
+</head>
+<body>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <span class="city-badge"><i class="bi bi-geo-alt"></i> עיריית הרצליה</span>
+    <div class="system-title">🚌 מערכת הסעות תיכונים</div>
+    <div class="system-sub">ניהול, ניתוח ואופטימיזציה של הסעות תלמידים</div>
+  </div>
+
+  <div class="login-card" style="background:white;border-radius:16px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+    <div class="login-header">
+      <div class="bus-icon">🏙️</div>
+      <h4>כניסה למערכת</h4>
+      <p>הזן את פרטי הגישה שקיבלת</p>
+    </div>
+
+    <div id="errorMsg" class="alert alert-danger" style="display:none;"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label">שם משתמש</label>
+        <div class="input-icon-wrap">
+          <i class="bi bi-person"></i>
+          <input type="text" id="username" class="form-control" placeholder="שם משתמש" autocomplete="username" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">סיסמה</label>
+        <div class="input-icon-wrap">
+          <i class="bi bi-lock"></i>
+          <input type="password" id="password" class="form-control" placeholder="סיסמה" autocomplete="current-password" required>
+        </div>
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn">
+        <span id="btnText">כניסה למערכת</span>
+        <span id="btnSpinner" style="display:none;"><i class="bi bi-hourglass-split"></i> מתחבר...</span>
+      </button>
+    </form>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;">
+      <p style="font-size:11px;color:#94a3b8;margin-bottom:6px;">פרטי התחברות לדמו:</p>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="fillLogin('admin','admin123')" style="background:#f1f5f9;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">admin / admin123</button>
+        <button onclick="fillLogin('manager','manager123')" style="background:#f1f5f9;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">manager / manager123</button>
+        <button onclick="fillLogin('viewer','viewer123')" style="background:#f1f5f9;border:none;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">viewer / viewer123</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;color:rgba(255,255,255,0.5);font-size:11px;">
+    מערכת הסעות הרצליה v1.0 | מאובטח עם JWT
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  if (Auth.isLoggedIn()) window.location.href = '/index.html';
+
+  function fillLogin(u, p) {
+    document.getElementById('username').value = u;
+    document.getElementById('password').value = p;
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    const errDiv = document.getElementById('errorMsg');
+    document.getElementById('btnText').style.display = 'none';
+    document.getElementById('btnSpinner').style.display = 'inline';
+    btn.disabled = true;
+    errDiv.style.display = 'none';
+
+    try {
+      const data = await API.login(
+        document.getElementById('username').value.trim(),
+        document.getElementById('password').value
+      );
+      if (data?.token) {
+        Auth.save(data.token, data.user);
+        window.location.href = '/index.html';
+      }
+    } catch (err) {
+      errDiv.textContent = err.message || 'שגיאת התחברות';
+      errDiv.style.display = 'block';
+      document.getElementById('btnText').style.display = 'inline';
+      document.getElementById('btnSpinner').style.display = 'none';
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
