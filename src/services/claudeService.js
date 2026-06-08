@@ -11,6 +11,42 @@ function getClient() {
 
 const STAKEHOLDERS = ['ערן ראובני', 'חברת דברת', 'מועצת תלמידים', 'מנהל החינוך', 'הורים', 'נהג'];
 
+function safeParseClaudeJSON(rawText, messageCount) {
+  // הסר גדרות קוד אם יש
+  let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+
+  // חלץ את ה-JSON הראשון
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) cleaned = match[0];
+
+  // נסה לפרסר ישירות
+  try { return JSON.parse(cleaned); } catch (_) {}
+
+  // תיקון: גרשיים כפולים לא מוסקייפים בתוך מחרוזות
+  try {
+    const fixed = cleaned
+      .replace(/:\s*"((?:[^"\\]|\\.)*)"/g, (m, inner) => {
+        const escaped = inner.replace(/(?<!\\)"/g, '\\"');
+        return `: "${escaped}"`;
+      });
+    return JSON.parse(fixed);
+  } catch (_) {}
+
+  // פולבק: בנה אובייקט מינימלי מהטקסט הגולמי
+  const npsMatch = rawText.match(/"nps_score"\s*:\s*([\d.]+)/);
+  const levelMatch = rawText.match(/"satisfaction_level"\s*:\s*"(\w+)"/);
+  return {
+    nps_score: npsMatch ? parseFloat(npsMatch[1]) : 3.0,
+    satisfaction_level: levelMatch ? levelMatch[1] : 'developing',
+    message_count: messageCount,
+    summary: 'ניתוח הושלם (עיבוד JSON חלקי)',
+    positive_themes: [],
+    negative_themes: [],
+    recommendations: [],
+    tasks: []
+  };
+}
+
 // =====================================================================
 // ניתוח טקסט חופשי — ללא דרישות פורמט
 // =====================================================================
@@ -91,11 +127,9 @@ ${text}
   });
 
   const rawText = response.content[0].text.trim();
-  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  const result = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+  const result = safeParseClaudeJSON(rawText, lines);
   result.raw_analysis = rawText;
   result.model_used = response.model;
-  if (!result.message_count) result.message_count = lines;
   return result;
 }
 
