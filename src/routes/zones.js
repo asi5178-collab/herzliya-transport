@@ -15,7 +15,7 @@ router.get('/', (req, res) => {
   res.json(zones);
 });
 
-router.post('/', requireRole('admin', 'manager'), (req, res) => {
+router.post('/', requireRole('admin'), (req, res) => {
   const { name, code, latitude, longitude, color, description } = req.body;
   if (!name || !code) return res.status(400).json({ error: 'שם וקוד אזור חובה' });
 
@@ -31,7 +31,7 @@ router.post('/', requireRole('admin', 'manager'), (req, res) => {
   }
 });
 
-router.put('/:id', requireRole('admin', 'manager'), (req, res) => {
+router.put('/:id', requireRole('admin'), (req, res) => {
   const { name, color, description, latitude, longitude, is_active } = req.body;
   const db = getDb();
   db.prepare(

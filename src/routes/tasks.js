@@ -23,7 +23,7 @@ router.get('/stakeholders', (req, res) => {
   res.json(rows.map(r => r.stakeholder));
 });
 
-router.post('/', requireRole('admin', 'manager'), (req, res) => {
+router.post('/', requireRole('admin'), (req, res) => {
   const { title, description, priority, deadline, assignee, stakeholder, category, week_date, week_number } = req.body;
   if (!title) return res.status(400).json({ error: 'כותרת חובה' });
   const db = getDb();
@@ -33,7 +33,7 @@ router.post('/', requireRole('admin', 'manager'), (req, res) => {
   res.json({ id: result.lastInsertRowid, success: true });
 });
 
-router.put('/:id', requireRole('admin', 'manager'), (req, res) => {
+router.put('/:id', requireRole('admin'), (req, res) => {
   const { title, description, priority, status, deadline, assignee, stakeholder, category } = req.body;
   const db = getDb();
   db.prepare('UPDATE tasks SET title=?, description=?, priority=?, status=?, deadline=?, assignee=?, stakeholder=?, category=? WHERE id=?')
@@ -41,13 +41,13 @@ router.put('/:id', requireRole('admin', 'manager'), (req, res) => {
   res.json({ success: true });
 });
 
-router.patch('/:id/status', requireRole('admin', 'manager'), (req, res) => {
+router.patch('/:id/status', requireRole('admin'), (req, res) => {
   const db = getDb();
   db.prepare('UPDATE tasks SET status = ? WHERE id = ?').run(req.body.status, req.params.id);
   res.json({ success: true });
 });
 
-router.delete('/:id', requireRole('admin', 'manager'), (req, res) => {
+router.delete('/:id', requireRole('admin'), (req, res) => {
   const db = getDb();
   db.prepare('DELETE FROM tasks WHERE id = ?').run(req.params.id);
   res.json({ success: true });

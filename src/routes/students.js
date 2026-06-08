@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
-router.post('/', requireRole('admin', 'manager'), (req, res) => {
+router.post('/', requireRole('admin'), (req, res) => {
   const { name, school_id, zone_id, line_id, address, latitude, longitude, parent_name, parent_phone, has_app } = req.body;
   if (!name) return res.status(400).json({ error: 'שם תלמיד חובה' });
 
@@ -41,7 +41,7 @@ router.post('/', requireRole('admin', 'manager'), (req, res) => {
   res.json({ id: result.lastInsertRowid, success: true });
 });
 
-router.put('/:id', requireRole('admin', 'manager'), (req, res) => {
+router.put('/:id', requireRole('admin'), (req, res) => {
   const { name, school_id, zone_id, line_id, address, latitude, longitude, parent_name, parent_phone, has_app } = req.body;
   const db = getDb();
   db.prepare(`

@@ -9,7 +9,7 @@ router.use(auth);
 // =====================================================================
 // ניתוח טקסט חופשי - ללא צורך בפורמט מסוים
 // =====================================================================
-router.post('/whatsapp-text', requireRole('admin', 'manager'), async (req, res) => {
+router.post('/whatsapp-text', requireRole('admin'), async (req, res) => {
   const { week_date, week_number, text, line_id } = req.body;
   if (!week_date) return res.status(400).json({ error: 'יש לבחור תאריך שבוע' });
   if (!text || text.trim().length < 10) return res.status(400).json({ error: 'יש להדביק טקסט (לפחות 10 תווים)' });
@@ -89,7 +89,7 @@ router.get('/history', (req, res) => {
 });
 
 // אופטימיזציה
-router.post('/optimize-route', requireRole('admin', 'manager'), async (req, res) => {
+router.post('/optimize-route', requireRole('admin'), async (req, res) => {
   const { line_id } = req.body;
   if (!line_id) return res.status(400).json({ error: 'נדרש מזהה קו' });
   const db = getDb();
@@ -104,7 +104,7 @@ router.post('/optimize-route', requireRole('admin', 'manager'), async (req, res)
 });
 
 // יצירת דוח
-router.post('/generate-report', requireRole('admin', 'manager'), async (req, res) => {
+router.post('/generate-report', requireRole('admin'), async (req, res) => {
   const { week_date } = req.body;
   if (!week_date) return res.status(400).json({ error: 'תאריך שבוע חובה' });
   const db = getDb();
@@ -127,7 +127,7 @@ router.post('/generate-report', requireRole('admin', 'manager'), async (req, res
 });
 
 // עדכון ניתוח ידני
-router.put('/week/:date', requireRole('admin', 'manager'), (req, res) => {
+router.put('/week/:date', requireRole('admin'), (req, res) => {
   try {
     const { nps_score, satisfaction_level, summary_hebrew, positive_themes, negative_themes, recommendations } = req.body;
     const db = getDb();
@@ -151,7 +151,7 @@ router.put('/week/:date', requireRole('admin', 'manager'), (req, res) => {
 });
 
 // מחיקת ניתוח שבועי
-router.delete('/week/:date', requireRole('admin', 'manager'), (req, res) => {
+router.delete('/week/:date', requireRole('admin'), (req, res) => {
   try {
     const db = getDb();
     db.prepare('DELETE FROM weekly_analysis WHERE week_date = ?').run(req.params.date);
@@ -161,7 +161,7 @@ router.delete('/week/:date', requireRole('admin', 'manager'), (req, res) => {
 });
 
 // מחיקה לפי מספר שבוע
-router.delete('/week-num/:num', requireRole('admin', 'manager'), (req, res) => {
+router.delete('/week-num/:num', requireRole('admin'), (req, res) => {
   try {
     const db = getDb();
     const num = parseInt(req.params.num);

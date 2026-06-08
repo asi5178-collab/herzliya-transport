@@ -34,7 +34,7 @@ router.get('/ridership', (req, res) => {
 });
 
 // הוספה / עדכון נתוני נסיעה — מספר שבוע מספיק
-router.post('/ridership', requireRole('admin', 'manager'), (req, res) => {
+router.post('/ridership', requireRole('admin'), (req, res) => {
   try {
     let { week_date, week_number, line_id, actual_riders, registered_students, capacity, notes } = req.body;
 
@@ -91,7 +91,7 @@ router.post('/ridership', requireRole('admin', 'manager'), (req, res) => {
 });
 
 // מחיקת שורה בודדת (לפי id)
-router.delete('/ridership/:id', requireRole('admin', 'manager'), (req, res) => {
+router.delete('/ridership/:id', requireRole('admin'), (req, res) => {
   try {
     const db = getDb();
     const result = db.prepare('DELETE FROM weekly_ridership WHERE id = ?').run(parseInt(req.params.id));
@@ -100,7 +100,7 @@ router.delete('/ridership/:id', requireRole('admin', 'manager'), (req, res) => {
 });
 
 // מחיקת כל שורות של שבוע מסוים (לפי week_number)
-router.delete('/ridership/week/:weekNum', requireRole('admin', 'manager'), (req, res) => {
+router.delete('/ridership/week/:weekNum', requireRole('admin'), (req, res) => {
   try {
     const db = getDb();
     const result = db.prepare('DELETE FROM weekly_ridership WHERE week_number = ?').run(parseInt(req.params.weekNum));

@@ -6,7 +6,7 @@ const { auth, requireRole } = require('../auth/middleware');
 const { parseExcel, parseCSV } = require('../services/importService');
 
 const router = express.Router();
-router.use(auth, requireRole('admin', 'manager'));
+router.use(auth, requireRole('admin'));
 
 const upload = multer({
   dest: './data/raw/',

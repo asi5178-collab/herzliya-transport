@@ -39,7 +39,7 @@ router.get('/:id', (req, res) => {
   });
 });
 
-router.put('/:id', requireRole('admin', 'manager'), (req, res) => {
+router.put('/:id', requireRole('admin'), (req, res) => {
   const { name, description, capacity, vehicle_type, waypoints, zone_ids, status } = req.body;
   const db = getDb();
   db.prepare(`

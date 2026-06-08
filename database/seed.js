@@ -23,9 +23,8 @@ function doSeed(db) {
 
     // Users
     const users = [
-      { username: 'admin',   password: 'admin123',   full_name: 'מנהל מערכת', role: 'admin' },
-      { username: 'manager', password: 'manager123', full_name: 'מנהל הסעות', role: 'manager' },
-      { username: 'viewer',  password: 'viewer123',  full_name: 'צופה',        role: 'viewer' }
+      { username: 'admin',  password: 'admin123',  full_name: 'מנהל מערכת', role: 'admin' },
+      { username: 'viewer', password: 'viewer123', full_name: 'צופה',        role: 'viewer' }
     ];
     const insertUser = db.prepare(`INSERT OR IGNORE INTO users (username, password_hash, full_name, role) VALUES (?,?,?,?)`);
     for (const u of users) insertUser.run(u.username, bcrypt.hashSync(u.password, 10), u.full_name, u.role);
