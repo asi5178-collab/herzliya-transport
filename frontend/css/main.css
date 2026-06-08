@@ -287,8 +287,9 @@ textarea.form-control { min-height: 100px; resize: vertical; }
 .score-good { background: #f0fdf4; color: #16a34a; border: 3px solid #86efac; }
 .score-excellent { background: #eff6ff; color: #1d4ed8; border: 3px solid #93c5fd; }
 
-/* Hide students from sidebar */
+/* Hide students and user management from sidebar */
 a.nav-link[href="students.html"] { display: none !important; }
+a.nav-link[href="users.html"] { display: none !important; }
 
 /* LTR mode overrides */
 body[data-lang="en"] { direction: ltr; }

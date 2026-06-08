@@ -11,6 +11,10 @@ const fs = require('fs');
 const { initDatabase } = require('./database/init');
 try { initDatabase(); } catch (e) { console.error('DB init error:', e.message); }
 
+// זריעת נתוני ברירת מחדל אם DB ריק
+const { seedIfEmpty } = require('./database/seed');
+try { seedIfEmpty(); } catch (e) { console.error('Seed error:', e.message); }
+
 const app = express();
 
 // אבטחה
