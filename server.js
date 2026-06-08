@@ -46,7 +46,13 @@ app.use('/api/reports', require('./src/routes/reports'));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), version: '1.0.0' });
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    version: '1.0.0',
+    api_key_set: !!process.env.ANTHROPIC_API_KEY,
+    api_key_prefix: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 10) + '...' : 'NOT SET'
+  });
 });
 
 // כל שאר הנתיבים - הגש frontend
