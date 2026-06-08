@@ -134,13 +134,16 @@ CREATE TABLE IF NOT EXISTS weekly_analysis (
 CREATE TABLE IF NOT EXISTS tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   week_date DATE,
+  week_number INTEGER,
   title TEXT NOT NULL,
   description TEXT,
-  priority TEXT DEFAULT 'medium',  -- high | medium | low
-  status TEXT DEFAULT 'open',      -- open | in_progress | done
+  priority TEXT DEFAULT 'medium',   -- high | medium | low
+  status TEXT DEFAULT 'open',       -- open | in_progress | done
+  category TEXT DEFAULT 'שיפור',    -- שיפור | שימור | ביצוע
+  stakeholder TEXT DEFAULT 'מנהל הסעות',
   assignee TEXT,
   deadline DATE,
-  source TEXT DEFAULT 'analysis',  -- analysis | manual
+  source TEXT DEFAULT 'analysis',   -- analysis | manual
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -11,6 +11,19 @@ const fs = require('fs');
 const { initDatabase } = require('./database/init');
 try { initDatabase(); } catch (e) { console.error('DB init error:', e.message); }
 
+// מיגרציות — הוספת עמודות חדשות לטבלאות קיימות
+const Database = require('./database/sqlite-compat');
+try {
+  const _mdb = new Database(process.env.DB_PATH || './database/herzliya.db');
+  const migrations = [
+    "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'שיפור'",
+    "ALTER TABLE tasks ADD COLUMN stakeholder TEXT DEFAULT 'מנהל הסעות'",
+    "ALTER TABLE tasks ADD COLUMN week_number INTEGER"
+  ];
+  for (const sql of migrations) { try { _mdb.exec(sql); } catch {} }
+  _mdb.close();
+} catch (e) { console.error('Migration error:', e.message); }
+
 // זריעת נתוני ברירת מחדל אם DB ריק
 const { seedIfEmpty } = require('./database/seed');
 try { seedIfEmpty(); } catch (e) { console.error('Seed error:', e.message); }
