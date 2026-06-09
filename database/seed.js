@@ -5,13 +5,19 @@ const bcrypt = require('bcryptjs');
 const DB_PATH = process.env.DB_PATH || './database/herzliya.db';
 
 function seedIfEmpty() {
+  // DISABLE_SEED=true מונע זריעה לחלוטין (מומלץ ב-production לאחר הגדרה ראשונית)
+  if (process.env.DISABLE_SEED === 'true') {
+    console.log('[OK] Seed disabled via DISABLE_SEED env var');
+    return;
+  }
   const db = new Database(DB_PATH);
   try {
     const existing = db.prepare('SELECT COUNT(*) as c FROM users').get();
     if (existing && existing.c > 0) {
-      console.log('[OK] Seed skipped — users already exist');
+      console.log(`[OK] Seed skipped — DB has ${existing.c} users already`);
       return;
     }
+    console.log('[INFO] Empty DB detected — seeding default data...');
     doSeed(db);
   } finally {
     db.close();
@@ -85,7 +91,7 @@ function doSeed(db) {
       { week: '2026-05-26', num: 22, line: 1, reg: 478, actual: 12, cap: 50 },
       { week: '2026-05-26', num: 22, line: 2, reg: 203, actual: 24, cap: 50 }
     ];
-    const insertRup = db.prepare(`INSERT OR REPLACE INTO weekly_ridership (week_date, week_number, line_id, registered_students, actual_riders, rup_percent, capacity) VALUES (?,?,?,?,?,?,?)`);
+    const insertRup = db.prepare(`INSERT OR IGNORE INTO weekly_ridership (week_date, week_number, line_id, registered_students, actual_riders, rup_percent, capacity) VALUES (?,?,?,?,?,?,?)`);
     for (const r of rupRows) {
       insertRup.run(r.week, r.num, r.line, r.reg, r.actual, ((r.actual / r.reg) * 100).toFixed(2), r.cap);
     }
@@ -123,7 +129,7 @@ function doSeed(db) {
         tasks: JSON.stringify([{title:'תכנון 3 קווים לספטמבר',priority:'high',deadline:'2026-06-15'},{title:'הטמעת מערכת GPS',priority:'medium',deadline:'2026-07-01'}]),
         summary: 'התייצבות חלקית לאחר משבר שבוע 21. תכנית ספטמבר בגיבוש עם 3 אוטובוסים.', count: 38 }
     ];
-    const insertAnalysis = db.prepare(`INSERT OR REPLACE INTO weekly_analysis (week_date, week_number, nps_score, satisfaction_level, positive_themes, negative_themes, recommendations, tasks, summary_hebrew, message_count) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+    const insertAnalysis = db.prepare(`INSERT OR IGNORE INTO weekly_analysis (week_date, week_number, nps_score, satisfaction_level, positive_themes, negative_themes, recommendations, tasks, summary_hebrew, message_count) VALUES (?,?,?,?,?,?,?,?,?,?)`);
     for (const a of analyses) insertAnalysis.run(a.week, a.num, a.nps, a.level, a.pos, a.neg, a.recs, a.tasks, a.summary, a.count);
 
     // Sample tasks
