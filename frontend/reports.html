@@ -8,27 +8,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-#reportEditor {
-  min-height: 400px;
-  line-height: 1.9;
-  font-size: 14px;
+#reportViewer {
+  min-height: 420px;
   font-family: 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
-  white-space: pre-wrap;
   outline: none;
-  padding: 8px;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: outline 0.2s;
+  line-height: 1.8;
 }
-#reportEditor[contenteditable="true"] {
-  background: #fffbeb;
-  border: 1px dashed #f59e0b;
-  padding: 12px;
+#reportViewer[contenteditable="true"] {
+  outline: 2px dashed #f59e0b;
+  background: #fffef5;
+  padding: 8px;
 }
 .toolbar-btn {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 5px 11px;
   font-size: 12px;
   cursor: pointer;
   display: inline-flex;
@@ -39,21 +36,21 @@
 }
 .toolbar-btn:hover { background: #f8fafc; border-color: #94a3b8; }
 .toolbar-btn.active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
-.toolbar-btn.danger { border-color: #fca5a5; color: #dc2626; }
+.toolbar-btn.success { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
+.toolbar-btn.danger  { border-color: #fca5a5; color: #dc2626; }
 .toolbar-btn.danger:hover { background: #fef2f2; }
 #pdfProgress {
-  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
-  z-index:9999; align-items:center; justify-content:center;
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 9999; align-items: center; justify-content: center;
 }
 #pdfProgress .box {
-  background:white; border-radius:12px; padding:32px 40px; text-align:center;
+  background: white; border-radius: 14px; padding: 36px 48px; text-align: center; min-width: 220px;
 }
 @media print {
-  #sidebar, #topbar, .card:first-child, #reportsList, #reportActionBar { display:none !important; }
-  #main-content { margin:0 !important; }
-  #page-content { padding:0 !important; }
-  .card { border:none !important; box-shadow:none !important; }
-  #reportEditor { font-size:13px; }
+  #sidebar, #topbar, .card:first-child, #reportsList, #reportActionBar { display: none !important; }
+  #main-content { margin: 0 !important; }
+  #page-content { padding: 0 !important; }
+  .card { border: none !important; box-shadow: none !important; }
 }
 </style>
 </head>
@@ -90,54 +87,56 @@
       <div class="card">
         <div class="card-title"><i class="bi bi-magic" style="color:#7c3aed;"></i> יצירת דוח חדש</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <select id="weekSelect" class="form-control" style="width:220px;"></select>
+          <select id="weekSelect" class="form-control" style="width:230px;"></select>
           <button onclick="generateReport()" id="genBtn" class="btn btn-primary">
-            <i class="bi bi-robot"></i> צור דוח עם Claude AI
+            <i class="bi bi-file-earmark-bar-graph"></i> צור דוח מנהלים
           </button>
-          <span style="font-size:12px;color:#94a3b8;">יוצר דוח מנהלים בעברית מתוך נתוני ניתוח קיים</span>
+          <span style="font-size:12px;color:#94a3b8;">דוח מעוצב עם כל המשימות הפתוחות לפי בעל עניין</span>
         </div>
         <div id="genAlert" style="display:none;margin-top:12px;" class="alert"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;">
+      <div style="display:grid;grid-template-columns:290px 1fr;gap:20px;">
         <!-- רשימת דוחות -->
-        <div class="card" style="padding:0;overflow:hidden;">
+        <div class="card" style="padding:0;overflow:hidden;align-self:start;">
           <div style="padding:16px;font-weight:600;font-size:14px;border-bottom:1px solid #f1f5f9;">
             <i class="bi bi-archive"></i> דוחות קיימים
           </div>
-          <div id="reportsList" style="max-height:620px;overflow-y:auto;"></div>
+          <div id="reportsList" style="max-height:650px;overflow-y:auto;"></div>
         </div>
 
         <!-- צפייה ועריכה -->
         <div class="card">
           <!-- כותרת + כפתורי פעולה -->
-          <div id="reportActionBar" style="display:none;margin-bottom:16px;">
+          <div id="reportActionBar" style="display:none;margin-bottom:20px;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
               <div>
                 <div id="reportViewTitle" style="font-size:16px;font-weight:700;color:#1e293b;"></div>
                 <div id="reportMeta" style="font-size:11px;color:#94a3b8;margin-top:2px;"></div>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;" id="btnGroup">
-                <button onclick="startEdit()" id="editBtn" class="toolbar-btn"><i class="bi bi-pencil"></i> ערוך</button>
-                <button onclick="saveEdit()" id="saveBtn" class="toolbar-btn active" style="display:none;"><i class="bi bi-check2"></i> שמור</button>
-                <button onclick="cancelEdit()" id="cancelBtn" class="toolbar-btn" style="display:none;"><i class="bi bi-x"></i> בטל</button>
-                <button onclick="downloadPDF()" class="toolbar-btn" id="pdfBtn"><i class="bi bi-file-earmark-pdf"></i> הורד PDF</button>
-                <button onclick="printReport()" class="toolbar-btn"><i class="bi bi-printer"></i> הדפס</button>
-                <button onclick="deleteReport()" class="toolbar-btn danger" id="delBtn"><i class="bi bi-trash"></i> מחק</button>
+                <button onclick="startEdit()"   id="editBtn"   class="toolbar-btn"><i class="bi bi-pencil"></i> ערוך</button>
+                <button onclick="saveEdit()"    id="saveBtn"   class="toolbar-btn success" style="display:none;"><i class="bi bi-check2"></i> שמור</button>
+                <button onclick="cancelEdit()"  id="cancelBtn" class="toolbar-btn" style="display:none;"><i class="bi bi-x"></i> בטל</button>
+                <button onclick="downloadPDF()" id="pdfBtn"    class="toolbar-btn"><i class="bi bi-file-earmark-pdf"></i> הורד PDF</button>
+                <button onclick="printReport()"               class="toolbar-btn"><i class="bi bi-printer"></i> הדפס</button>
+                <button onclick="deleteReport()" id="delBtn"  class="toolbar-btn danger"><i class="bi bi-trash"></i> מחק</button>
               </div>
             </div>
-            <!-- שורת עריכת כותרת (מוצגת רק בעריכה) -->
+            <!-- עריכת כותרת -->
             <div id="titleEditRow" style="display:none;margin-top:10px;">
               <input id="titleInput" type="text" class="form-control" placeholder="כותרת הדוח" style="font-weight:600;">
             </div>
           </div>
 
-          <!-- תוכן הדוח -->
+          <!-- placeholder -->
           <div id="reportPlaceholder" style="text-align:center;padding:80px 20px;color:#94a3b8;">
             <div style="font-size:52px;margin-bottom:12px;">📄</div>
             <div style="font-size:14px;">בחר דוח מהרשימה או צור דוח חדש</div>
           </div>
-          <div id="reportEditor" contenteditable="false" style="display:none;"></div>
+
+          <!-- תוכן הדוח — HTML מעוצב -->
+          <div id="reportViewer" contenteditable="false" style="display:none;"></div>
         </div>
       </div>
 
@@ -145,12 +144,12 @@
   </div>
 </div>
 
-<!-- PDF progress overlay -->
+<!-- PDF overlay -->
 <div id="pdfProgress">
   <div class="box">
-    <div style="font-size:36px;margin-bottom:12px;">📄</div>
-    <div style="font-weight:600;margin-bottom:6px;">מכין PDF...</div>
-    <div style="font-size:12px;color:#64748b;">אנא המתן</div>
+    <div style="font-size:40px;margin-bottom:12px;">📄</div>
+    <div style="font-weight:700;margin-bottom:6px;font-size:15px;">מכין PDF...</div>
+    <div style="font-size:12px;color:#64748b;">אנא המתן מספר שניות</div>
   </div>
 </div>
 
@@ -159,10 +158,16 @@
 if (!Auth.requireAuth()) {}
 const isAdmin = Auth.hasRole('admin');
 let currentReportId = null;
-let originalContent = '';
-let originalTitle = '';
+let originalHTML    = '';
+let originalTitle   = '';
 
-/* ─── אתחול ─── */
+/* ─── API ─── */
+API.reports      = ()       => API.get('/reports');
+API.report       = id       => API.get(`/reports/${id}`);
+API.deleteReport = id       => API.del(`/reports/${id}`);
+API.updateReport = (id, d)  => API.put(`/reports/${id}`, d);
+
+/* ─── init ─── */
 async function init() {
   const [weeks, reports] = await Promise.all([API.weeks(), API.reports()]);
   const sel = document.getElementById('weekSelect');
@@ -173,38 +178,43 @@ async function init() {
 
 /* ─── רשימה ─── */
 function renderList(reports) {
-  document.getElementById('reportsList').innerHTML = reports.length
-    ? reports.map(r => `
-        <div onclick="viewReport(${r.id})" data-id="${r.id}"
-          style="padding:14px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;"
-          onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=currentReportId===${r.id}?'#eff6ff':''">
-          <div style="font-weight:600;font-size:13px;">${r.title}</div>
-          <div style="font-size:11px;color:#94a3b8;margin-top:3px;"><i class="bi bi-calendar3"></i> ${formatDate(r.created_at)}</div>
-        </div>`).join('')
-    : '<div style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">אין דוחות עדיין</div>';
+  const el = document.getElementById('reportsList');
+  if (!reports.length) {
+    el.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">אין דוחות עדיין</div>';
+    return;
+  }
+  el.innerHTML = reports.map(r => `
+    <div onclick="viewReport(${r.id})" data-id="${r.id}"
+      style="padding:14px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;"
+      onmouseover="this.style.background='#f8fafc'"
+      onmouseout="this.style.background=currentReportId===${r.id}?'#eff6ff':''">
+      <div style="font-weight:600;font-size:13px;">${r.title}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:3px;"><i class="bi bi-calendar3"></i> ${formatDate(r.created_at)}</div>
+    </div>`).join('');
 }
 
-/* ─── צפייה בדוח ─── */
+/* ─── צפייה ─── */
 async function viewReport(id) {
   cancelEdit();
   currentReportId = id;
   document.querySelectorAll('#reportsList [data-id]').forEach(el => {
     el.style.background = el.dataset.id == id ? '#eff6ff' : '';
   });
+
   const report = await API.report(id);
-  originalContent = report.content_hebrew || '';
-  originalTitle   = report.title || '';
+  originalHTML  = report.content_hebrew || '';
+  originalTitle = report.title || '';
 
   document.getElementById('reportPlaceholder').style.display = 'none';
-  document.getElementById('reportActionBar').style.display = 'block';
-  document.getElementById('reportViewTitle').textContent = report.title;
+  document.getElementById('reportActionBar').style.display   = 'block';
+  document.getElementById('reportViewTitle').textContent     = report.title;
   document.getElementById('reportMeta').textContent =
     `נוצר: ${formatDate(report.created_at)}${report.created_by_name ? ' | ' + report.created_by_name : ''}`;
 
-  const editor = document.getElementById('reportEditor');
-  editor.style.display = 'block';
-  editor.contentEditable = 'false';
-  editor.textContent = report.content_hebrew;
+  const viewer = document.getElementById('reportViewer');
+  viewer.style.display   = 'block';
+  viewer.contentEditable = 'false';
+  viewer.innerHTML       = originalHTML;
 
   document.getElementById('editBtn').style.display = isAdmin ? 'inline-flex' : 'none';
   document.getElementById('delBtn').style.display  = isAdmin ? 'inline-flex' : 'none';
@@ -212,9 +222,9 @@ async function viewReport(id) {
 
 /* ─── עריכה ─── */
 function startEdit() {
-  const editor = document.getElementById('reportEditor');
-  editor.contentEditable = 'true';
-  editor.focus();
+  const viewer = document.getElementById('reportViewer');
+  viewer.contentEditable = 'true';
+  viewer.focus();
   document.getElementById('editBtn').style.display   = 'none';
   document.getElementById('saveBtn').style.display   = 'inline-flex';
   document.getElementById('cancelBtn').style.display = 'inline-flex';
@@ -224,9 +234,9 @@ function startEdit() {
 
 function cancelEdit() {
   if (!currentReportId) return;
-  const editor = document.getElementById('reportEditor');
-  editor.contentEditable = 'false';
-  editor.textContent = originalContent;
+  const viewer = document.getElementById('reportViewer');
+  viewer.contentEditable = 'false';
+  viewer.innerHTML = originalHTML;
   document.getElementById('reportViewTitle').textContent = originalTitle;
   document.getElementById('editBtn').style.display   = isAdmin ? 'inline-flex' : 'none';
   document.getElementById('saveBtn').style.display   = 'none';
@@ -236,18 +246,18 @@ function cancelEdit() {
 
 async function saveEdit() {
   if (!currentReportId) return;
-  const newContent = document.getElementById('reportEditor').textContent;
-  const newTitle   = document.getElementById('titleInput').value.trim() || originalTitle;
+  const newHTML   = document.getElementById('reportViewer').innerHTML;
+  const newTitle  = document.getElementById('titleInput').value.trim() || originalTitle;
   try {
-    await API.updateReport(currentReportId, { title: newTitle, content_hebrew: newContent });
-    originalContent = newContent;
-    originalTitle   = newTitle;
+    await API.updateReport(currentReportId, { title: newTitle, content_hebrew: newHTML });
+    originalHTML  = newHTML;
+    originalTitle = newTitle;
     document.getElementById('reportViewTitle').textContent = newTitle;
     cancelEdit();
-    showAlert('✅ הדוח נשמר בהצלחה', 'success');
+    showAlert('הדוח נשמר בהצלחה', 'success');
     renderList(await API.reports());
   } catch(err) {
-    showAlert('❌ שגיאה בשמירה: ' + err.message, 'danger');
+    showAlert('שגיאה בשמירה: ' + err.message, 'danger');
   }
 }
 
@@ -257,12 +267,12 @@ async function deleteReport() {
   await API.deleteReport(currentReportId);
   currentReportId = null;
   document.getElementById('reportPlaceholder').style.display = 'block';
-  document.getElementById('reportActionBar').style.display  = 'none';
-  document.getElementById('reportEditor').style.display     = 'none';
+  document.getElementById('reportActionBar').style.display   = 'none';
+  document.getElementById('reportViewer').style.display      = 'none';
   renderList(await API.reports());
 }
 
-/* ─── יצירת דוח חדש ─── */
+/* ─── יצירת דוח ─── */
 async function generateReport() {
   if (!isAdmin) return;
   const week = document.getElementById('weekSelect').value;
@@ -273,93 +283,95 @@ async function generateReport() {
   showAlert('', '');
   try {
     const result = await API.generateReport(week);
-    showAlert('✅ הדוח נוצר בהצלחה!', 'success');
-    originalContent = result.report;
-    originalTitle   = `דוח שבועי - ${formatDate(week)}`;
+    showAlert('הדוח נוצר בהצלחה', 'success');
+    originalHTML  = result.report;
+    originalTitle = `דוח שבועי - ${formatDate(week)}`;
+
     document.getElementById('reportPlaceholder').style.display = 'none';
     document.getElementById('reportActionBar').style.display   = 'block';
     document.getElementById('reportViewTitle').textContent     = originalTitle;
     document.getElementById('reportMeta').textContent          = 'נוצר עכשיו';
-    const editor = document.getElementById('reportEditor');
-    editor.style.display    = 'block';
-    editor.contentEditable  = 'false';
-    editor.textContent      = result.report;
+
+    const viewer = document.getElementById('reportViewer');
+    viewer.style.display   = 'block';
+    viewer.contentEditable = 'false';
+    viewer.innerHTML       = result.report;
+
     document.getElementById('editBtn').style.display = isAdmin ? 'inline-flex' : 'none';
     document.getElementById('delBtn').style.display  = isAdmin ? 'inline-flex' : 'none';
+
     const reports = await API.reports();
     renderList(reports);
-    // בחר את הדוח החדש ברשימה
-    if (reports.length) { currentReportId = reports[0].id; }
+    if (reports.length) currentReportId = reports[0].id;
   } catch(err) {
-    showAlert('❌ ' + err.message, 'danger');
+    showAlert(err.message, 'danger');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-robot"></i> צור דוח עם Claude AI';
+    btn.innerHTML = '<i class="bi bi-file-earmark-bar-graph"></i> צור דוח מנהלים';
   }
 }
 
-/* ─── הורדת PDF ─── */
+/* ─── PDF ─── */
 async function downloadPDF() {
-  const editor = document.getElementById('reportEditor');
-  if (!editor || editor.style.display === 'none') return;
+  const viewer = document.getElementById('reportViewer');
+  if (!viewer || viewer.style.display === 'none') return;
 
   document.getElementById('pdfProgress').style.display = 'flex';
-
   try {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    // הכן div נקי להדפסה
-    const printDiv = document.createElement('div');
-    printDiv.style.cssText = `
-      width: 700px; padding: 40px; font-family: 'Segoe UI','Arial Hebrew',Arial,sans-serif;
-      font-size: 13px; line-height: 1.9; direction: rtl; text-align: right;
-      color: #1e293b; background: white; white-space: pre-wrap;
-    `;
+    // עטוף בדיב נקי לרינדור
+    const wrap = document.createElement('div');
+    wrap.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'width:900px',
+      'padding:32px 40px', 'background:white',
+      'font-family:Segoe UI,"Arial Hebrew",Arial,sans-serif',
+      'direction:rtl', 'z-index:-1', 'visibility:hidden'
+    ].join(';');
+    wrap.innerHTML = viewer.innerHTML;
+    document.body.appendChild(wrap);
 
-    // כותרת
-    const titleEl = document.createElement('div');
-    titleEl.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:6px;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:8px;';
-    titleEl.textContent = document.getElementById('reportViewTitle').textContent;
-    printDiv.appendChild(titleEl);
+    // קצר המתנה לרינדור
+    await new Promise(r => setTimeout(r, 120));
 
-    const metaEl = document.createElement('div');
-    metaEl.style.cssText = 'font-size:11px;color:#64748b;margin-bottom:20px;';
-    metaEl.textContent = document.getElementById('reportMeta').textContent;
-    printDiv.appendChild(metaEl);
-
-    const contentEl = document.createElement('div');
-    contentEl.textContent = editor.textContent;
-    printDiv.appendChild(contentEl);
-
-    document.body.appendChild(printDiv);
-
-    const canvas = await html2canvas(printDiv, {
+    const canvas = await html2canvas(wrap, {
       scale: 2, useCORS: true, backgroundColor: '#ffffff',
-      windowWidth: 780
+      width: 900, windowWidth: 980
     });
+    document.body.removeChild(wrap);
 
-    document.body.removeChild(printDiv);
+    const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const margin = 12;
+    const pageW  = 210;
+    const pageH  = 297;
+    const usableW = pageW - margin * 2;
+    const usableH = pageH - margin * 2;
+    const imgW   = usableW;
+    const imgH   = (canvas.height * imgW) / canvas.width;
 
-    const imgData = canvas.toDataURL('image/png');
-    const pageW = 210, pageH = 297, margin = 10;
-    const imgW = pageW - margin * 2;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    let y = margin;
-    let remaining = imgH;
+    let srcY = 0;
+    let page = 0;
+    const rowPx = (canvas.height / imgH) * usableH; // px per page
 
-    pdf.addImage(imgData, 'PNG', margin, y, imgW, imgH);
-    remaining -= (pageH - margin * 2);
-    y = margin - (pageH - margin * 2);
+    while (srcY < canvas.height) {
+      if (page > 0) pdf.addPage();
 
-    while (remaining > 0) {
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, y, imgW, imgH);
-      remaining -= (pageH - margin * 2);
-      y -= (pageH - margin * 2);
+      // חתוך slice מהקנבס
+      const sliceH = Math.min(rowPx, canvas.height - srcY);
+      const slice  = document.createElement('canvas');
+      slice.width  = canvas.width;
+      slice.height = sliceH;
+      slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+
+      const sliceImg = slice.toDataURL('image/png');
+      const sliceMmH = (sliceH * usableW) / canvas.width;
+      pdf.addImage(sliceImg, 'PNG', margin, margin, usableW, sliceMmH);
+
+      srcY += rowPx;
+      page++;
     }
 
-    const filename = `דוח-שבועי-${new Date().toISOString().slice(0,10)}.pdf`;
+    const filename = `דוח-ניהולי-${new Date().toISOString().slice(0,10)}.pdf`;
     pdf.save(filename);
   } catch(err) {
     alert('שגיאה ביצירת PDF: ' + err.message);
@@ -370,24 +382,25 @@ async function downloadPDF() {
 
 /* ─── הדפסה ─── */
 function printReport() {
-  const content = document.getElementById('reportEditor')?.textContent;
-  const title   = document.getElementById('reportViewTitle')?.textContent || '';
-  if (!content) return;
-  const win = window.open('', '', 'width=820,height=700');
-  win.document.write(`
-    <html dir="rtl"><head>
+  const viewer = document.getElementById('reportViewer');
+  const title  = document.getElementById('reportViewTitle')?.textContent || '';
+  if (!viewer || viewer.style.display === 'none') return;
+  const win = window.open('', '', 'width=960,height=780');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head>
     <meta charset="UTF-8">
     <style>
-      body { font-family:'Segoe UI','Arial Hebrew',Arial,sans-serif; line-height:1.9;
-             padding:40px 50px; direction:rtl; color:#1e293b; font-size:13px; }
-      h1   { font-size:18px; color:#1e40af; border-bottom:2px solid #1e40af;
-             padding-bottom:8px; margin-bottom:20px; }
-      pre  { white-space:pre-wrap; font-family:inherit; }
-    </style></head>
-    <body><h1>${title}</h1><pre>${content}</pre></body></html>`);
+      * { box-sizing:border-box; }
+      body { font-family:'Segoe UI','Arial Hebrew',Arial,sans-serif;
+             padding:32px 40px; direction:rtl; color:#1e293b; margin:0; }
+      table { border-collapse:collapse; width:100%; }
+      th,td { padding:7px 10px; }
+      @page { margin:18mm; }
+    </style>
+    <title>${title}</title>
+  </head><body>${viewer.innerHTML}</body></html>`);
   win.document.close();
   win.focus();
-  win.print();
+  setTimeout(() => { win.print(); win.close(); }, 400);
 }
 
 /* ─── עזר ─── */
@@ -398,19 +411,11 @@ function showAlert(msg, type) {
   el.textContent = msg;
   el.style.display = 'block';
 }
-
 function formatDate(s) {
   if (!s) return '';
   const d = new Date(s);
-  if (isNaN(d)) return s;
-  return d.toLocaleDateString('he-IL');
+  return isNaN(d) ? s : d.toLocaleDateString('he-IL');
 }
-
-/* ─── API extensions ─── */
-API.reports = () => API.get('/reports');
-API.report  = id => API.get(`/reports/${id}`);
-API.deleteReport = id => API.del(`/reports/${id}`);
-API.updateReport = (id, data) => API.put(`/reports/${id}`, data);
 
 init();
 </script>

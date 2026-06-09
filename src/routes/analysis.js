@@ -103,28 +103,150 @@ router.post('/optimize-route', requireRole('admin'), async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// יצירת דוח
-router.post('/generate-report', requireRole('admin'), async (req, res) => {
+// יצירת דוח — HTML מעוצב עם כל המשימות הפתוחות לפי בעל עניין
+router.post('/generate-report', requireRole('admin'), (req, res) => {
   const { week_date } = req.body;
   if (!week_date) return res.status(400).json({ error: 'תאריך שבוע חובה' });
   const db = getDb();
   const analysis = db.prepare('SELECT * FROM weekly_analysis WHERE week_date = ?').get(week_date);
   const rup = db.prepare('SELECT ROUND(100.0*SUM(actual_riders)/SUM(registered_students),1) as avg_rup, SUM(actual_riders) as total FROM weekly_ridership WHERE week_date = ?').get(week_date);
   if (!analysis) return res.status(404).json({ error: 'ניתוח לא קיים לשבוע זה' });
-  try {
-    const report = await generateWeeklyReport({
-      week_date, week_number: analysis.week_number,
-      nps_score: analysis.nps_score, satisfaction_level: analysis.satisfaction_level,
-      avg_rup: rup?.avg_rup, total_riders: rup?.total,
-      positive_themes: JSON.parse(analysis.positive_themes || '[]'),
-      negative_themes: JSON.parse(analysis.negative_themes || '[]'),
-      recommendations: JSON.parse(analysis.recommendations || '[]')
-    });
-    db.prepare('INSERT INTO reports (week_date, title, content_hebrew, created_by) VALUES (?,?,?,?)').run(
-      week_date, `דוח שבועי שבוע ${analysis.week_number} (${week_date})`, report, req.user.id);
-    res.json({ success: true, report });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+
+  const openTasks = db.prepare(
+    `SELECT * FROM tasks WHERE status != 'done'
+     ORDER BY stakeholder,
+       CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+       created_at DESC`
+  ).all();
+
+  const report = buildHTMLReport({
+    week_date, week_number: analysis.week_number,
+    nps_score: analysis.nps_score, satisfaction_level: analysis.satisfaction_level,
+    avg_rup: rup?.avg_rup, total_riders: rup?.total,
+    summary: analysis.summary_hebrew,
+    posThemes: JSON.parse(analysis.positive_themes || '[]'),
+    negThemes: JSON.parse(analysis.negative_themes || '[]'),
+    recommendations: JSON.parse(analysis.recommendations || '[]'),
+    openTasks
+  });
+
+  const title = `דוח שבועי שבוע ${analysis.week_number || ''} (${week_date})`.trim();
+  db.prepare('INSERT INTO reports (week_date, title, content_hebrew, created_by) VALUES (?,?,?,?)').run(
+    week_date, title, report, req.user.id);
+  res.json({ success: true, report });
 });
+
+function buildHTMLReport(d) {
+  const dateStr = d.week_date ? new Date(d.week_date).toLocaleDateString('he-IL') : '';
+  const satMap = { excellent: ['מצוין','#16a34a'], good: ['טוב','#2563eb'], developing: ['בפיתוח','#d97706'], critical: ['קריטי','#dc2626'] };
+  const [satLabel, satColor] = satMap[d.satisfaction_level] || [d.satisfaction_level || '', '#64748b'];
+  const priLabel = { high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' };
+  const priColor = { high: '#dc2626', medium: '#d97706', low: '#16a34a' };
+  const stLabel  = { open: 'פתוח', in_progress: 'בביצוע' };
+
+  // קיבוץ לפי בעל עניין
+  const byStakeholder = {};
+  for (const t of d.openTasks) {
+    const sh = t.stakeholder || 'כללי';
+    (byStakeholder[sh] = byStakeholder[sh] || []).push(t);
+  }
+
+  const li = s => `<li style="padding:4px 0;color:#374151;">${s}</li>`;
+
+  let tasksHTML = '';
+  for (const [sh, tasks] of Object.entries(byStakeholder)) {
+    const highCount = tasks.filter(t => t.priority === 'high').length;
+    tasksHTML += `
+      <div style="margin-bottom:20px;">
+        <div style="background:#1e40af;color:white;padding:9px 16px;border-radius:6px 6px 0 0;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center;">
+          <span>${sh}</span>
+          <span style="font-size:11px;opacity:0.85;">${tasks.length} משימות${highCount ? ' | ' + highCount + ' דחופות' : ''}</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-top:none;font-size:13px;">
+          <thead>
+            <tr style="background:#eff6ff;">
+              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:80px;">דחיפות</th>
+              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;">משימה</th>
+              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:90px;">קטגוריה</th>
+              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:80px;">סטטוס</th>
+              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:100px;">יעד לסיום</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tasks.map((t, i) => `
+            <tr style="background:${i % 2 === 0 ? 'white' : '#f8fafc'};">
+              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">
+                <span style="background:${priColor[t.priority] || '#64748b'}22;color:${priColor[t.priority] || '#64748b'};padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">${priLabel[t.priority] || t.priority}</span>
+              </td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${t.title}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${t.category || ''}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${stLabel[t.status] || t.status}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${t.deadline ? new Date(t.deadline).toLocaleDateString('he-IL') : ''}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  if (!tasksHTML) {
+    tasksHTML = '<div style="color:#16a34a;padding:16px;background:#f0fdf4;border-radius:8px;text-align:center;font-size:14px;">אין משימות פתוחות לטיפול</div>';
+  }
+
+  return `<div style="font-family:\'Segoe UI\',\'Arial Hebrew\',Arial,sans-serif;direction:rtl;color:#1e293b;max-width:860px;">
+
+  <div style="background:linear-gradient(135deg,#1e3a8a 0%,#1e40af 60%,#2563eb 100%);color:white;padding:28px 32px;border-radius:10px;margin-bottom:24px;text-align:center;">
+    <div style="font-size:11px;letter-spacing:3px;opacity:0.75;margin-bottom:8px;">עיריית הרצליה</div>
+    <div style="font-size:26px;font-weight:800;margin-bottom:4px;">דוח ניהולי שבועי</div>
+    <div style="font-size:14px;opacity:0.85;">מערכת הסעות תיכונים</div>
+    <div style="margin-top:14px;font-size:13px;background:rgba(255,255,255,0.18);display:inline-block;padding:5px 22px;border-radius:20px;">שבוע ${d.week_number || ''} &nbsp;|&nbsp; ${dateStr}</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #2563eb;">
+      <div style="font-size:30px;font-weight:800;color:#2563eb;">${d.nps_score ? Number(d.nps_score).toFixed(1) : 'N/A'}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">ציון NPS (מתוך 5)</div>
+    </div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #16a34a;">
+      <div style="font-size:30px;font-weight:800;color:#16a34a;">${d.avg_rup ? d.avg_rup + '%' : 'N/A'}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">שיעור ניצול (RUP)</div>
+    </div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid ${satColor};">
+      <div style="font-size:30px;font-weight:800;color:${satColor};">${satLabel}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">רמת שביעות רצון</div>
+    </div>
+  </div>
+
+  ${d.summary ? `<div style="background:#f8fafc;border-right:4px solid #2563eb;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:24px;font-size:14px;line-height:1.85;color:#334155;">${d.summary}</div>` : ''}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+    ${d.posThemes.length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;">
+      <div style="font-weight:700;color:#16a34a;margin-bottom:12px;font-size:14px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">חוזקות</div>
+      <ul style="margin:0;padding-right:18px;font-size:13px;">${d.posThemes.map(li).join('')}</ul>
+    </div>` : ''}
+    ${d.negThemes.length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;">
+      <div style="font-weight:700;color:#dc2626;margin-bottom:12px;font-size:14px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">אתגרים</div>
+      <ul style="margin:0;padding-right:18px;font-size:13px;">${d.negThemes.map(li).join('')}</ul>
+    </div>` : ''}
+  </div>
+
+  ${d.recommendations.length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:24px;">
+    <div style="font-weight:700;color:#7c3aed;margin-bottom:12px;font-size:14px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">המלצות לפעולה</div>
+    <ul style="margin:0;padding-right:18px;font-size:13px;">${d.recommendations.map(li).join('')}</ul>
+  </div>` : ''}
+
+  <div style="margin-bottom:24px;">
+    <div style="font-weight:700;font-size:15px;margin-bottom:16px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">
+      משימות פתוחות לטיפול
+      <span style="font-size:13px;color:#64748b;font-weight:400;margin-right:8px;">${d.openTasks.length} משימות</span>
+    </div>
+    ${tasksHTML}
+  </div>
+
+  <div style="text-align:center;padding:16px;color:#94a3b8;font-size:11px;border-top:1px solid #f1f5f9;margin-top:8px;">
+    עיריית הרצליה &nbsp;|&nbsp; מערכת ניהול הסעות תיכונים &nbsp;|&nbsp; הופק: ${new Date().toLocaleDateString('he-IL')}
+  </div>
+</div>`;
+}
 
 // עדכון ניתוח ידני
 router.put('/week/:date', requireRole('admin'), (req, res) => {
