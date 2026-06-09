@@ -320,23 +320,23 @@ async function downloadPDF() {
   try {
     const { jsPDF } = window.jspdf;
 
-    // עטוף בדיב נקי לרינדור
+    // שכפול התוכן מחוץ למסך — חשוב: לא visibility:hidden (גורם לריק)
     const wrap = document.createElement('div');
     wrap.style.cssText = [
-      'position:fixed', 'top:0', 'left:0', 'width:900px',
+      'position:fixed', 'top:0', 'left:-9999px', 'width:900px',
       'padding:32px 40px', 'background:white',
       'font-family:Segoe UI,"Arial Hebrew",Arial,sans-serif',
-      'direction:rtl', 'z-index:-1', 'visibility:hidden'
+      'direction:rtl', 'color:#1e293b'
     ].join(';');
     wrap.innerHTML = viewer.innerHTML;
     document.body.appendChild(wrap);
 
-    // קצר המתנה לרינדור
-    await new Promise(r => setTimeout(r, 120));
+    // המתן לשני פריימים כדי שה-layout יתייצב
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     const canvas = await html2canvas(wrap, {
       scale: 2, useCORS: true, backgroundColor: '#ffffff',
-      width: 900, windowWidth: 980
+      width: 900, windowWidth: 980, logging: false
     });
     document.body.removeChild(wrap);
 

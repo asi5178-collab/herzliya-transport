@@ -91,10 +91,9 @@ app.listen(PORT, HOST, () => {
   console.log(`  🌐 רשת:     http://${localIP}:${PORT}`);
   console.log(`  📅 תאריך:   ${new Date().toLocaleDateString('he-IL')}`);
   console.log('='.repeat(55));
-  console.log('  משתמשים ברירת מחדל:');
+  console.log('  משתמשים:');
   console.log('  admin / admin123  (מנהל מלא)');
-  console.log('  manager / manager123  (מנהל הסעות)');
-  console.log('  viewer / viewer123  (צפייה)');
+  console.log('  viewer / viewer123  (צפייה בלבד)');
   console.log('='.repeat(55) + '\n');
 });
 
