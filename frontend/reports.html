@@ -5,6 +5,57 @@
 <title>דוחות - הסעות הרצליה</title>
 <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+#reportEditor {
+  min-height: 400px;
+  line-height: 1.9;
+  font-size: 14px;
+  font-family: 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+  white-space: pre-wrap;
+  outline: none;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+#reportEditor[contenteditable="true"] {
+  background: #fffbeb;
+  border: 1px dashed #f59e0b;
+  padding: 12px;
+}
+.toolbar-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.toolbar-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+.toolbar-btn.active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+.toolbar-btn.danger { border-color: #fca5a5; color: #dc2626; }
+.toolbar-btn.danger:hover { background: #fef2f2; }
+#pdfProgress {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5);
+  z-index:9999; align-items:center; justify-content:center;
+}
+#pdfProgress .box {
+  background:white; border-radius:12px; padding:32px 40px; text-align:center;
+}
+@media print {
+  #sidebar, #topbar, .card:first-child, #reportsList, #reportActionBar { display:none !important; }
+  #main-content { margin:0 !important; }
+  #page-content { padding:0 !important; }
+  .card { border:none !important; box-shadow:none !important; }
+  #reportEditor { font-size:13px; }
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -22,125 +73,347 @@
       <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
       <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
       <a href="reports.html" class="nav-link active"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+      <a href="users.html" class="nav-link"><i class="bi bi-people-fill"></i> ניהול משתמשים</a>
     </div>
     <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
       <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
     </div>
   </nav>
+
   <div id="main-content">
     <div id="topbar">
-      <div style="font-size:15px;font-weight:600;"><i class="bi bi-file-earmark-text" style="color:#16a34a;"></i> דוחות שבועיים</div>
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-file-earmark-text" style="color:#16a34a;"></i> דוחות ניהוליים</div>
     </div>
     <div id="page-content">
-      <!-- Generate report -->
+
+      <!-- יצירת דוח חדש -->
       <div class="card">
-        <div class="card-title"><i class="bi bi-magic" style="color:#7c3aed;"></i> יצירת דוח חדש עם Claude AI</div>
+        <div class="card-title"><i class="bi bi-magic" style="color:#7c3aed;"></i> יצירת דוח חדש</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <select id="weekSelect" class="form-control" style="width:200px;"></select>
+          <select id="weekSelect" class="form-control" style="width:220px;"></select>
           <button onclick="generateReport()" id="genBtn" class="btn btn-primary">
-            <i class="bi bi-robot"></i> צור דוח שבועי
+            <i class="bi bi-robot"></i> צור דוח עם Claude AI
           </button>
           <span style="font-size:12px;color:#94a3b8;">יוצר דוח מנהלים בעברית מתוך נתוני ניתוח קיים</span>
         </div>
         <div id="genAlert" style="display:none;margin-top:12px;" class="alert"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;">
-        <!-- Reports list -->
-        <div class="card">
-          <div class="card-title">דוחות קיימים</div>
-          <div id="reportsList" style="max-height:600px;overflow-y:auto;"></div>
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;">
+        <!-- רשימת דוחות -->
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="padding:16px;font-weight:600;font-size:14px;border-bottom:1px solid #f1f5f9;">
+            <i class="bi bi-archive"></i> דוחות קיימים
+          </div>
+          <div id="reportsList" style="max-height:620px;overflow-y:auto;"></div>
         </div>
 
-        <!-- Report view -->
+        <!-- צפייה ועריכה -->
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div class="card-title" style="margin-bottom:0;" id="reportViewTitle">בחר דוח</div>
-            <button onclick="printReport()" class="btn btn-outline btn-sm" id="printBtn" style="display:none;"><i class="bi bi-printer"></i> הדפס</button>
-          </div>
-          <div id="reportContent" style="min-height:200px;">
-            <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
-              <div style="font-size:48px;margin-bottom:12px;">📄</div>
-              <div>בחר דוח מהרשימה או צור דוח חדש</div>
+          <!-- כותרת + כפתורי פעולה -->
+          <div id="reportActionBar" style="display:none;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+              <div>
+                <div id="reportViewTitle" style="font-size:16px;font-weight:700;color:#1e293b;"></div>
+                <div id="reportMeta" style="font-size:11px;color:#94a3b8;margin-top:2px;"></div>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;" id="btnGroup">
+                <button onclick="startEdit()" id="editBtn" class="toolbar-btn"><i class="bi bi-pencil"></i> ערוך</button>
+                <button onclick="saveEdit()" id="saveBtn" class="toolbar-btn active" style="display:none;"><i class="bi bi-check2"></i> שמור</button>
+                <button onclick="cancelEdit()" id="cancelBtn" class="toolbar-btn" style="display:none;"><i class="bi bi-x"></i> בטל</button>
+                <button onclick="downloadPDF()" class="toolbar-btn" id="pdfBtn"><i class="bi bi-file-earmark-pdf"></i> הורד PDF</button>
+                <button onclick="printReport()" class="toolbar-btn"><i class="bi bi-printer"></i> הדפס</button>
+                <button onclick="deleteReport()" class="toolbar-btn danger" id="delBtn"><i class="bi bi-trash"></i> מחק</button>
+              </div>
+            </div>
+            <!-- שורת עריכת כותרת (מוצגת רק בעריכה) -->
+            <div id="titleEditRow" style="display:none;margin-top:10px;">
+              <input id="titleInput" type="text" class="form-control" placeholder="כותרת הדוח" style="font-weight:600;">
             </div>
           </div>
+
+          <!-- תוכן הדוח -->
+          <div id="reportPlaceholder" style="text-align:center;padding:80px 20px;color:#94a3b8;">
+            <div style="font-size:52px;margin-bottom:12px;">📄</div>
+            <div style="font-size:14px;">בחר דוח מהרשימה או צור דוח חדש</div>
+          </div>
+          <div id="reportEditor" contenteditable="false" style="display:none;"></div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
+
+<!-- PDF progress overlay -->
+<div id="pdfProgress">
+  <div class="box">
+    <div style="font-size:36px;margin-bottom:12px;">📄</div>
+    <div style="font-weight:600;margin-bottom:6px;">מכין PDF...</div>
+    <div style="font-size:12px;color:#64748b;">אנא המתן</div>
+  </div>
+</div>
+
 <script src="js/api.js"></script>
 <script>
 if (!Auth.requireAuth()) {}
-const canGen = Auth.hasRole('admin','manager');
+const isAdmin = Auth.hasRole('admin');
+let currentReportId = null;
+let originalContent = '';
+let originalTitle = '';
 
+/* ─── אתחול ─── */
 async function init() {
   const [weeks, reports] = await Promise.all([API.weeks(), API.reports()]);
   const sel = document.getElementById('weekSelect');
-  sel.innerHTML = '<option value="">בחר שבוע...</option>';
+  sel.innerHTML = '<option value="">בחר שבוע לדוח חדש...</option>';
   weeks.forEach(w => sel.appendChild(new Option(`שבוע ${w.week_number} (${formatDate(w.week_date)})`, w.week_date)));
-  renderReportsList(reports);
+  renderList(reports);
 }
 
-function renderReportsList(reports) {
-  document.getElementById('reportsList').innerHTML = reports.length ? reports.map(r=>`
-    <div onclick="viewReport(${r.id})" style="padding:12px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
-      <div style="font-weight:600;font-size:13px;">${r.title}</div>
-      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${formatDate(r.created_at)} | ${r.created_by_name||''}</div>
-    </div>
-  `).join('') : '<div style="text-align:center;color:#94a3b8;padding:30px;">אין דוחות עדיין</div>';
+/* ─── רשימה ─── */
+function renderList(reports) {
+  document.getElementById('reportsList').innerHTML = reports.length
+    ? reports.map(r => `
+        <div onclick="viewReport(${r.id})" data-id="${r.id}"
+          style="padding:14px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;"
+          onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=currentReportId===${r.id}?'#eff6ff':''">
+          <div style="font-weight:600;font-size:13px;">${r.title}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:3px;"><i class="bi bi-calendar3"></i> ${formatDate(r.created_at)}</div>
+        </div>`).join('')
+    : '<div style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">אין דוחות עדיין</div>';
 }
 
+/* ─── צפייה בדוח ─── */
 async function viewReport(id) {
+  cancelEdit();
+  currentReportId = id;
+  document.querySelectorAll('#reportsList [data-id]').forEach(el => {
+    el.style.background = el.dataset.id == id ? '#eff6ff' : '';
+  });
   const report = await API.report(id);
+  originalContent = report.content_hebrew || '';
+  originalTitle   = report.title || '';
+
+  document.getElementById('reportPlaceholder').style.display = 'none';
+  document.getElementById('reportActionBar').style.display = 'block';
   document.getElementById('reportViewTitle').textContent = report.title;
-  document.getElementById('printBtn').style.display='inline-flex';
-  document.getElementById('reportContent').innerHTML = `
-    <div id="printableReport" style="line-height:1.8;font-size:13px;white-space:pre-wrap;font-family:'Segoe UI',Arial,sans-serif;">
-${report.content_hebrew}
-    </div>
-  `;
+  document.getElementById('reportMeta').textContent =
+    `נוצר: ${formatDate(report.created_at)}${report.created_by_name ? ' | ' + report.created_by_name : ''}`;
+
+  const editor = document.getElementById('reportEditor');
+  editor.style.display = 'block';
+  editor.contentEditable = 'false';
+  editor.textContent = report.content_hebrew;
+
+  document.getElementById('editBtn').style.display = isAdmin ? 'inline-flex' : 'none';
+  document.getElementById('delBtn').style.display  = isAdmin ? 'inline-flex' : 'none';
 }
 
-async function generateReport() {
-  if (!canGen) return;
-  const week = document.getElementById('weekSelect').value;
-  if (!week) { showGenAlert('בחר שבוע', 'warning'); return; }
-  const btn = document.getElementById('genBtn');
-  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> יוצר דוח...';
-  showGenAlert('','');
+/* ─── עריכה ─── */
+function startEdit() {
+  const editor = document.getElementById('reportEditor');
+  editor.contentEditable = 'true';
+  editor.focus();
+  document.getElementById('editBtn').style.display   = 'none';
+  document.getElementById('saveBtn').style.display   = 'inline-flex';
+  document.getElementById('cancelBtn').style.display = 'inline-flex';
+  document.getElementById('titleEditRow').style.display = 'block';
+  document.getElementById('titleInput').value = originalTitle;
+}
+
+function cancelEdit() {
+  if (!currentReportId) return;
+  const editor = document.getElementById('reportEditor');
+  editor.contentEditable = 'false';
+  editor.textContent = originalContent;
+  document.getElementById('reportViewTitle').textContent = originalTitle;
+  document.getElementById('editBtn').style.display   = isAdmin ? 'inline-flex' : 'none';
+  document.getElementById('saveBtn').style.display   = 'none';
+  document.getElementById('cancelBtn').style.display = 'none';
+  document.getElementById('titleEditRow').style.display = 'none';
+}
+
+async function saveEdit() {
+  if (!currentReportId) return;
+  const newContent = document.getElementById('reportEditor').textContent;
+  const newTitle   = document.getElementById('titleInput').value.trim() || originalTitle;
   try {
-    const result = await API.generateReport(week);
-    showGenAlert('✅ הדוח נוצר בהצלחה!', 'success');
-    document.getElementById('reportViewTitle').textContent = `דוח שבועי - ${formatDate(week)}`;
-    document.getElementById('printBtn').style.display='inline-flex';
-    document.getElementById('reportContent').innerHTML = `
-      <div id="printableReport" style="line-height:1.8;font-size:13px;white-space:pre-wrap;">${result.report}</div>
-    `;
-    const reports = await API.reports();
-    renderReportsList(reports);
+    await API.updateReport(currentReportId, { title: newTitle, content_hebrew: newContent });
+    originalContent = newContent;
+    originalTitle   = newTitle;
+    document.getElementById('reportViewTitle').textContent = newTitle;
+    cancelEdit();
+    showAlert('✅ הדוח נשמר בהצלחה', 'success');
+    renderList(await API.reports());
   } catch(err) {
-    showGenAlert('❌ ' + err.message, 'danger');
-  } finally {
-    btn.disabled=false; btn.innerHTML='<i class="bi bi-robot"></i> צור דוח שבועי';
+    showAlert('❌ שגיאה בשמירה: ' + err.message, 'danger');
   }
 }
 
-function showGenAlert(msg, type) {
-  const el=document.getElementById('genAlert');
-  if(!msg){el.style.display='none';return;}
-  el.className=`alert alert-${type}`;el.textContent=msg;el.style.display='block';
+/* ─── מחיקה ─── */
+async function deleteReport() {
+  if (!currentReportId || !confirm('למחוק את הדוח?')) return;
+  await API.deleteReport(currentReportId);
+  currentReportId = null;
+  document.getElementById('reportPlaceholder').style.display = 'block';
+  document.getElementById('reportActionBar').style.display  = 'none';
+  document.getElementById('reportEditor').style.display     = 'none';
+  renderList(await API.reports());
 }
 
-function printReport() {
-  const content = document.getElementById('printableReport')?.innerHTML;
-  if (!content) return;
-  const win = window.open('','','width=800,height=600');
-  win.document.write(`<html dir="rtl"><head><style>body{font-family:'Segoe UI',Arial;line-height:1.8;padding:40px;direction:rtl;white-space:pre-wrap;}</style></head><body>${content}</body></html>`);
-  win.document.close(); win.print();
+/* ─── יצירת דוח חדש ─── */
+async function generateReport() {
+  if (!isAdmin) return;
+  const week = document.getElementById('weekSelect').value;
+  if (!week) { showAlert('בחר שבוע', 'warning'); return; }
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> יוצר דוח...';
+  showAlert('', '');
+  try {
+    const result = await API.generateReport(week);
+    showAlert('✅ הדוח נוצר בהצלחה!', 'success');
+    originalContent = result.report;
+    originalTitle   = `דוח שבועי - ${formatDate(week)}`;
+    document.getElementById('reportPlaceholder').style.display = 'none';
+    document.getElementById('reportActionBar').style.display   = 'block';
+    document.getElementById('reportViewTitle').textContent     = originalTitle;
+    document.getElementById('reportMeta').textContent          = 'נוצר עכשיו';
+    const editor = document.getElementById('reportEditor');
+    editor.style.display    = 'block';
+    editor.contentEditable  = 'false';
+    editor.textContent      = result.report;
+    document.getElementById('editBtn').style.display = isAdmin ? 'inline-flex' : 'none';
+    document.getElementById('delBtn').style.display  = isAdmin ? 'inline-flex' : 'none';
+    const reports = await API.reports();
+    renderList(reports);
+    // בחר את הדוח החדש ברשימה
+    if (reports.length) { currentReportId = reports[0].id; }
+  } catch(err) {
+    showAlert('❌ ' + err.message, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-robot"></i> צור דוח עם Claude AI';
+  }
 }
+
+/* ─── הורדת PDF ─── */
+async function downloadPDF() {
+  const editor = document.getElementById('reportEditor');
+  if (!editor || editor.style.display === 'none') return;
+
+  document.getElementById('pdfProgress').style.display = 'flex';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // הכן div נקי להדפסה
+    const printDiv = document.createElement('div');
+    printDiv.style.cssText = `
+      width: 700px; padding: 40px; font-family: 'Segoe UI','Arial Hebrew',Arial,sans-serif;
+      font-size: 13px; line-height: 1.9; direction: rtl; text-align: right;
+      color: #1e293b; background: white; white-space: pre-wrap;
+    `;
+
+    // כותרת
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:6px;color:#1e40af;border-bottom:2px solid #1e40af;padding-bottom:8px;';
+    titleEl.textContent = document.getElementById('reportViewTitle').textContent;
+    printDiv.appendChild(titleEl);
+
+    const metaEl = document.createElement('div');
+    metaEl.style.cssText = 'font-size:11px;color:#64748b;margin-bottom:20px;';
+    metaEl.textContent = document.getElementById('reportMeta').textContent;
+    printDiv.appendChild(metaEl);
+
+    const contentEl = document.createElement('div');
+    contentEl.textContent = editor.textContent;
+    printDiv.appendChild(contentEl);
+
+    document.body.appendChild(printDiv);
+
+    const canvas = await html2canvas(printDiv, {
+      scale: 2, useCORS: true, backgroundColor: '#ffffff',
+      windowWidth: 780
+    });
+
+    document.body.removeChild(printDiv);
+
+    const imgData = canvas.toDataURL('image/png');
+    const pageW = 210, pageH = 297, margin = 10;
+    const imgW = pageW - margin * 2;
+    const imgH = (canvas.height * imgW) / canvas.width;
+    let y = margin;
+    let remaining = imgH;
+
+    pdf.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+    remaining -= (pageH - margin * 2);
+    y = margin - (pageH - margin * 2);
+
+    while (remaining > 0) {
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+      remaining -= (pageH - margin * 2);
+      y -= (pageH - margin * 2);
+    }
+
+    const filename = `דוח-שבועי-${new Date().toISOString().slice(0,10)}.pdf`;
+    pdf.save(filename);
+  } catch(err) {
+    alert('שגיאה ביצירת PDF: ' + err.message);
+  } finally {
+    document.getElementById('pdfProgress').style.display = 'none';
+  }
+}
+
+/* ─── הדפסה ─── */
+function printReport() {
+  const content = document.getElementById('reportEditor')?.textContent;
+  const title   = document.getElementById('reportViewTitle')?.textContent || '';
+  if (!content) return;
+  const win = window.open('', '', 'width=820,height=700');
+  win.document.write(`
+    <html dir="rtl"><head>
+    <meta charset="UTF-8">
+    <style>
+      body { font-family:'Segoe UI','Arial Hebrew',Arial,sans-serif; line-height:1.9;
+             padding:40px 50px; direction:rtl; color:#1e293b; font-size:13px; }
+      h1   { font-size:18px; color:#1e40af; border-bottom:2px solid #1e40af;
+             padding-bottom:8px; margin-bottom:20px; }
+      pre  { white-space:pre-wrap; font-family:inherit; }
+    </style></head>
+    <body><h1>${title}</h1><pre>${content}</pre></body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+
+/* ─── עזר ─── */
+function showAlert(msg, type) {
+  const el = document.getElementById('genAlert');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function formatDate(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString('he-IL');
+}
+
+/* ─── API extensions ─── */
+API.reports = () => API.get('/reports');
+API.report  = id => API.get(`/reports/${id}`);
+API.deleteReport = id => API.del(`/reports/${id}`);
+API.updateReport = (id, data) => API.put(`/reports/${id}`, data);
 
 init();
 </script>
+<script src="js/i18n.js"></script>
 </body>
 </html>
