@@ -180,4 +180,83 @@ async function optimizeRoute(lineData, studentLocations) {
   return response.content[0].text;
 }
 
-module.exports = { analyzeRawText, generateWeeklyReport, optimizeRoute };
+// =====================================================================
+// ניתוח WhatsApp תלמידים — שביעות רצון ילדים
+// =====================================================================
+async function analyzeStudentText(text, weekDate, weekNumber, contextData = {}) {
+  const anthropic = getClient();
+
+  const lines = text.split('\n').filter(l => l.trim().length > 2).length;
+
+  const systemPrompt = `אתה מנתח מומחה לשביעות רצון **תלמידים** בשירותי הסעות תיכון - עיריית הרצליה.
+אתה מקבל הודעות WhatsApp מקבוצת **תלמידים** (לא הורים).
+תפקידך: לנתח את תחושות התלמידים ולתת מדד שביעות רצון ילדים.
+התמקד ב:
+1. נוחות הנסיעה מנקודת מבט התלמיד (לא ההורה)
+2. מערכות יחסים חברתיות באוטובוס
+3. זמני נסיעה ועמידה ביעדים
+4. בטיחות ותחושת ביטחון של התלמיד
+5. הצעות שיפור מהתלמידים עצמם
+
+בעלי עניין רלוונטיים: מועצת תלמידים | ערן ראובני | חברת דברת | מנהל החינוך
+שבוע ${weekNumber || '?'} (${weekDate})
+החזר JSON בלבד.`;
+
+  const userPrompt = `נתח את הודעות ה-WhatsApp של **התלמידים** הבאות ותן ציון שביעות רצון ילדים:
+
+---
+${text}
+---
+
+החזר JSON בדיוק בפורמט הזה:
+{
+  "nps_score": 3.2,
+  "satisfaction_level": "developing",
+  "message_count": ${lines},
+  "student_count": 0,
+  "summary": "סיכום 2-3 משפטים על תחושות התלמידים",
+  "positive_themes": ["דבר שהתלמידים אוהבים 1", "דבר 2"],
+  "negative_themes": ["בעיה מנקודת מבט תלמיד 1", "בעיה 2"],
+  "top_student_complaints": ["תלונה עיקרית 1", "תלונה 2"],
+  "top_student_praises": ["שבח עיקרי 1", "שבח 2"],
+  "recommendations": ["המלצה מעשית לשיפור חווית התלמיד 1", "המלצה 2"],
+  "tasks": [
+    {
+      "title": "כותרת משימה מנקודת מבט תלמידים",
+      "description": "מה בדיוק לשפר לפי דרישת התלמידים",
+      "priority": "high",
+      "deadline": "${getDeadline(weekDate, 2)}",
+      "stakeholder": "מועצת תלמידים",
+      "category": "שיפור"
+    }
+  ],
+  "sentiment_breakdown": {
+    "positive_percent": 50,
+    "negative_percent": 35,
+    "neutral_percent": 15
+  },
+  "key_student_quotes": ["ציטוט תלמיד 1", "ציטוט תלמיד 2"]
+}
+
+חוקים:
+- satisfaction_level: critical | developing | good | excellent
+- priority: high | medium | low
+- category: שיפור | שימור | ביצוע
+- stakeholder: מועצת תלמידים | ערן ראובני | חברת דברת | מנהל החינוך
+- הנושאים צריכים לשקף את נקודת המבט של **הילדים/תלמידים** לא ההורים`;
+
+  const response = await anthropic.messages.create({
+    model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+    max_tokens: 2500,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }]
+  });
+
+  const rawText = response.content[0].text.trim();
+  const result = safeParseClaudeJSON(rawText, lines);
+  result.raw_analysis = rawText;
+  result.model_used = response.model;
+  return result;
+}
+
+module.exports = { analyzeRawText, analyzeStudentText, generateWeeklyReport, optimizeRoute };

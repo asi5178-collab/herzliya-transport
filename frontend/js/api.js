@@ -92,6 +92,19 @@ const API = (() => {
     updateTask: (id, d) => request('PUT', `/tasks/${id}`, d),
     taskStatus: (id, s) => request('PATCH', `/tasks/${id}/status`, { status: s }),
 
+    // Students WhatsApp
+    studentsWithWhatsapp: (params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      return request('GET', `/students/with-whatsapp${qs ? '?' + qs : ''}`);
+    },
+
+    // Student Analysis
+    analyzeStudentText: (d) => request('POST', '/student-analysis/analyze', d),
+    getStudentAnalysis: (date) => request('GET', `/student-analysis/week/${date}`),
+    studentAnalysisHistory: () => request('GET', '/student-analysis/history'),
+    studentAnalysisComparison: () => request('GET', '/student-analysis/comparison'),
+    deleteStudentAnalysis: (date) => request('DELETE', `/student-analysis/week/${date}`),
+
     // Reports
     reports: () => request('GET', '/reports'),
     report: (id) => request('GET', `/reports/${id}`),

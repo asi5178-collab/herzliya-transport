@@ -18,7 +18,39 @@ try {
   const migrations = [
     "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'שיפור'",
     "ALTER TABLE tasks ADD COLUMN stakeholder TEXT DEFAULT 'מנהל הסעות'",
-    "ALTER TABLE tasks ADD COLUMN week_number INTEGER"
+    "ALTER TABLE tasks ADD COLUMN week_number INTEGER",
+    // מיגרציה: WhatsApp תלמידים
+    "ALTER TABLE students ADD COLUMN whatsapp_phone TEXT",
+    `CREATE TABLE IF NOT EXISTS student_whatsapp_analysis (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_date DATE NOT NULL,
+      week_number INTEGER,
+      line_id INTEGER REFERENCES lines(id),
+      nps_score REAL,
+      satisfaction_level TEXT,
+      positive_themes TEXT,
+      negative_themes TEXT,
+      recommendations TEXT,
+      tasks TEXT,
+      summary_hebrew TEXT,
+      raw_analysis TEXT,
+      message_count INTEGER DEFAULT 0,
+      student_count INTEGER DEFAULT 0,
+      model_used TEXT DEFAULT 'claude-sonnet-4-6',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(week_date)
+    )`,
+    `CREATE TABLE IF NOT EXISTS student_whatsapp_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_date DATE NOT NULL,
+      week_number INTEGER,
+      line_id INTEGER REFERENCES lines(id),
+      student_name TEXT,
+      student_id INTEGER REFERENCES students(id),
+      message_text TEXT NOT NULL,
+      sentiment TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
   ];
   for (const sql of migrations) { try { _mdb.exec(sql); } catch {} }
   _mdb.close();
@@ -52,6 +84,7 @@ app.use('/api/students', require('./src/routes/students'));
 app.use('/api/lines', require('./src/routes/lines'));
 app.use('/api/weekly', require('./src/routes/weekly'));
 app.use('/api/analysis', require('./src/routes/analysis'));
+app.use('/api/student-analysis', require('./src/routes/studentAnalysis'));
 app.use('/api/import', require('./src/routes/import'));
 app.use('/api/tasks', require('./src/routes/tasks'));
 app.use('/api/users', require('./src/routes/users'));

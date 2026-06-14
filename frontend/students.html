@@ -60,7 +60,7 @@
         </div>
         <div class="table-wrapper">
           <table>
-            <thead><tr><th>שם תלמיד</th><th>בית ספר</th><th>אזור</th><th>קו</th><th>כתובת</th><th>הורה</th><th>פעולות</th></tr></thead>
+            <thead><tr><th>שם תלמיד</th><th>בית ספר</th><th>אזור</th><th>קו</th><th>כתובת</th><th>הורה</th><th>WhatsApp</th><th>פעולות</th></tr></thead>
             <tbody id="studentTable"></tbody>
           </table>
         </div>
@@ -85,6 +85,11 @@
       <div class="form-group"><label class="form-label">שם הורה</label><input type="text" id="fParent" class="form-control"></div>
       <div class="form-group"><label class="form-label">טלפון הורה</label><input type="tel" id="fPhone" class="form-control" dir="ltr"></div>
       <div class="form-group" style="grid-column:span 2;">
+        <label class="form-label"><i class="bi bi-whatsapp" style="color:#25D366;"></i> מספר WhatsApp תלמיד</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="tel" id="fWhatsapp" class="form-control" dir="ltr" placeholder="+972501234567 או 0501234567">
+          <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">לניתוח שביעות רצון ילדים</span>
+        </div>
       </div>
     </div>
     <div id="modalAlert" style="display:none;" class="alert"></div>
@@ -152,6 +157,7 @@ async function loadStudents() {
       <td>${s.line_name ? `<span style="font-size:12px;">${s.line_code}</span>` : '<span style="color:#94a3b8;">-</span>'}</td>
       <td style="font-size:12px;color:#64748b;">${s.address||'-'}</td>
       <td style="font-size:12px;">${s.parent_name||''} ${s.parent_phone?'<br><span style="color:#94a3b8;">'+s.parent_phone+'</span>':''}</td>
+      <td style="font-size:12px;">${s.whatsapp_phone ? `<a href="https://wa.me/${s.whatsapp_phone.replace(/[^0-9]/g,'')}" target="_blank" style="color:#25D366;text-decoration:none;display:flex;align-items:center;gap:4px;" title="שלח WhatsApp"><i class="bi bi-whatsapp" style="font-size:15px;"></i><span style="font-size:10px;color:#64748b;">${s.whatsapp_phone}</span></a>` : '<span style="color:#cbd5e1;font-size:11px;">-</span>'}</td>
       <td>${canEdit?`<button onclick="openEdit(${s.id})" class="btn btn-outline btn-sm"><i class="bi bi-pencil"></i></button>`:''}
       </td>
     </tr>
@@ -174,18 +180,19 @@ async function openEdit(id) {
   document.getElementById('fAddress').value = s.address||'';
   document.getElementById('fParent').value = s.parent_name||'';
   document.getElementById('fPhone').value = s.parent_phone||'';
+  document.getElementById('fWhatsapp').value = s.whatsapp_phone||'';
   setSelect('fZone', s.zone_id); setSelect('fLine', s.line_id);
   document.getElementById('modal').style.display='flex';
 }
 
 function setSelect(id, val) { const el=document.getElementById(id); for(const o of el.options) if(o.value==val){o.selected=true;break;} }
-function clearForm() { ['fName','fAddress','fParent','fPhone'].forEach(id=>document.getElementById(id).value=''); document.getElementById('fApp').checked=false; }
+function clearForm() { ['fName','fAddress','fParent','fPhone','fWhatsapp'].forEach(id=>document.getElementById(id).value=''); }
 function closeModal() { document.getElementById('modal').style.display='none'; document.getElementById('modalAlert').style.display='none'; }
 
 async function saveStudent() {
   const name=document.getElementById('fName').value.trim();
   if(!name){showModalAlert('שם חובה','danger');return;}
-  const data={name,school_id:document.getElementById('fSchool').value||null,zone_id:document.getElementById('fZone').value||null,line_id:document.getElementById('fLine').value||null,address:document.getElementById('fAddress').value,parent_name:document.getElementById('fParent').value,parent_phone:document.getElementById('fPhone').value};
+  const data={name,school_id:document.getElementById('fSchool').value||null,zone_id:document.getElementById('fZone').value||null,line_id:document.getElementById('fLine').value||null,address:document.getElementById('fAddress').value,parent_name:document.getElementById('fParent').value,parent_phone:document.getElementById('fPhone').value,whatsapp_phone:document.getElementById('fWhatsapp').value||null};
   try {
     if(editId) await API.updateStudent(editId,data); else await API.createStudent(data);
     closeModal(); loadStudents(); toast(editId?'✅ תלמיד עודכן':'✅ תלמיד נוסף');
