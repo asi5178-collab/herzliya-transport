@@ -76,6 +76,7 @@ app.use('/api/tasks', require('./src/routes/tasks'));
 app.use('/api/users', require('./src/routes/users'));
 app.use('/api/reports', require('./src/routes/reports'));
 app.use('/api/student-analysis', require('./src/routes/student-analysis'));
+app.use('/api/backup', require('./src/routes/backup'));
 
 // Health check
 app.get('/api/health', (req, res) => {

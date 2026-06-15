@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>גיבוי ושחזור - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.step-box {
+  border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px 24px;
+  margin-bottom: 16px; background: white;
+}
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; flex-shrink: 0;
+}
+.table-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px;
+}
+.table-row:last-child { border-bottom: none; }
+.count-badge {
+  background: #eff6ff; color: #1d4ed8; padding: 2px 10px;
+  border-radius: 12px; font-size: 12px; font-weight: 600;
+}
+.drop-zone {
+  border: 2px dashed #cbd5e1; border-radius: 10px; padding: 32px;
+  text-align: center; cursor: pointer; transition: all 0.2s;
+  background: #f8fafc;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: #2563eb; background: #eff6ff;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp הורים</a>
+      <a href="student-analysis.html" class="nav-link"><i class="bi bi-mortarboard"></i> ניתוח WhatsApp תלמידים</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+      <a href="backup.html" class="nav-link active"><i class="bi bi-shield-check"></i> גיבוי ושחזור</a>
+      <a href="admin.html" class="nav-link"><i class="bi bi-gear"></i> ניהול משתמשים</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-shield-check" style="color:#16a34a;"></i> גיבוי ושחזור נתונים</div>
+    </div>
+    <div id="page-content">
+
+      <!-- אזהרה -->
+      <div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:13px;color:#854d0e;display:flex;gap:10px;align-items:flex-start;">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:16px;flex-shrink:0;margin-top:1px;"></i>
+        <div>
+          <strong>חשוב:</strong> Railway מאפס את בסיס הנתונים בכל deploy חדש.
+          <strong>לפני כל עדכון קוד — ייצא גיבוי</strong> ושמור אותו במחשב שלך.
+          לאחר ה-deploy — שחזר מהגיבוי.
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- גיבוי -->
+        <div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-download" style="color:#2563eb;"></i> ייצוא גיבוי</div>
+
+            <div class="step-box" style="border-color:#dbeafe;background:#eff6ff;">
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <span class="step-num" style="background:#2563eb;color:white;">1</span>
+                <div>
+                  <div style="font-weight:600;margin-bottom:4px;">לחץ "הורד גיבוי"</div>
+                  <div style="font-size:12px;color:#64748b;">מוריד קובץ JSON עם כל הנתונים מהמערכת</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- סטטוס DB נוכחי -->
+            <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+              <div style="padding:10px 14px;background:#f8fafc;font-weight:600;font-size:12px;color:#475569;border-bottom:1px solid #e2e8f0;">
+                מצב בסיס הנתונים הנוכחי
+              </div>
+              <div id="statusList">
+                <div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px;">טוען...</div>
+              </div>
+            </div>
+
+            <button onclick="exportBackup()" id="exportBtn" class="btn btn-primary" style="width:100%;background:#2563eb;border-color:#2563eb;font-size:14px;padding:10px;">
+              <i class="bi bi-download"></i> הורד גיבוי עכשיו
+            </button>
+            <div id="exportResult" style="display:none;margin-top:10px;" class="alert alert-success"></div>
+          </div>
+        </div>
+
+        <!-- שחזור -->
+        <div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-upload" style="color:#16a34a;"></i> שחזור מגיבוי</div>
+
+            <div class="step-box" style="border-color:#dcfce7;background:#f0fdf4;">
+              <div style="display:flex;gap:12px;align-items:flex-start;">
+                <span class="step-num" style="background:#16a34a;color:white;">2</span>
+                <div>
+                  <div style="font-weight:600;margin-bottom:4px;">בחר קובץ גיבוי ולחץ "שחזר"</div>
+                  <div style="font-size:12px;color:#64748b;">משחזר את כל הנתונים מהקובץ שיצרת בשלב 1</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+              <i class="bi bi-file-earmark-arrow-up" style="font-size:32px;color:#94a3b8;"></i>
+              <div style="margin-top:10px;font-weight:600;color:#475569;">לחץ לבחירת קובץ גיבוי</div>
+              <div style="font-size:12px;color:#94a3b8;margin-top:4px;">או גרור קובץ JSON לכאן</div>
+            </div>
+            <input type="file" id="fileInput" accept=".json" style="display:none" onchange="fileSelected(event)">
+
+            <div id="fileInfo" style="display:none;margin:12px 0;padding:10px 14px;background:#f0fdf4;border-radius:8px;font-size:13px;color:#374151;border:1px solid #bbf7d0;">
+              <i class="bi bi-file-earmark-check" style="color:#16a34a;"></i>
+              <span id="fileName"></span>
+            </div>
+
+            <button onclick="importBackup()" id="importBtn" class="btn" disabled
+              style="width:100%;background:#16a34a;border-color:#16a34a;color:white;font-size:14px;padding:10px;margin-top:8px;opacity:0.5;">
+              <i class="bi bi-upload"></i> שחזר נתונים
+            </button>
+            <div id="importResult" style="display:none;margin-top:10px;" class="alert"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- תוצאות שחזור -->
+      <div id="importDetails" style="display:none;" class="card">
+        <div class="card-title"><i class="bi bi-check2-all" style="color:#16a34a;"></i> תוצאות שחזור</div>
+        <div id="importDetailsList"></div>
+      </div>
+
+      <!-- הנחיות Railway Volume -->
+      <div class="card">
+        <div class="card-title"><i class="bi bi-database" style="color:#7c3aed;"></i> פתרון קבוע — Railway Volume</div>
+        <div style="font-size:13px;color:#374151;line-height:1.9;">
+          <p style="margin-bottom:12px;">כלי הגיבוי/שחזור הוא פתרון זמני. הפתרון הקבוע הוא להגדיר <strong>Volume ב-Railway</strong> שישמור את בסיס הנתונים בין deployments.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <div style="font-weight:700;margin-bottom:8px;color:#1e293b;">דרך א — מרמת ה-Project:</div>
+              <ol style="padding-right:18px;margin:0;color:#374151;">
+                <li style="padding:4px 0;">כנס ל-Railway → Project</li>
+                <li style="padding:4px 0;">לחץ <strong>"+ New"</strong> בקנבס</li>
+                <li style="padding:4px 0;">בחר <strong>"Volume"</strong></li>
+                <li style="padding:4px 0;">Mount Path: <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px;">/data</code></li>
+                <li style="padding:4px 0;">חבר ל-Service herzliya-transport</li>
+              </ol>
+            </div>
+            <div>
+              <div style="font-weight:700;margin-bottom:8px;color:#1e293b;">דרך ב — מתוך ה-Service:</div>
+              <ol style="padding-right:18px;margin:0;color:#374151;">
+                <li style="padding:4px 0;">כנס ל-Service → <strong>Settings</strong></li>
+                <li style="padding:4px 0;">גלול למטה לחלק <strong>"Volumes"</strong></li>
+                <li style="padding:4px 0;">לחץ <strong>"Add Volume"</strong></li>
+                <li style="padding:4px 0;">Mount Path: <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px;">/data</code></li>
+              </ol>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding:12px 16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <div style="font-weight:600;margin-bottom:6px;">לאחר יצירת ה-Volume — הוסף ב-Variables:</div>
+            <code style="background:#1e293b;color:#e2e8f0;padding:8px 14px;border-radius:6px;display:block;font-size:13px;">DB_PATH=/data/herzliya.db</code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+if (!Auth.hasRole('admin')) { location.href = 'index.html'; }
+
+let backupData = null;
+
+const tableNames = {
+  users: 'משתמשים', schools: 'בתי ספר', zones: 'אזורים', lines: 'קווים',
+  parent_groups: 'קבוצות הורים', students: 'תלמידים',
+  weekly_ridership: 'נסיעות שבועיות', weekly_analysis: 'ניתוחי הורים',
+  whatsapp_messages: 'הודעות WhatsApp', tasks: 'משימות',
+  reports: 'דוחות', student_analysis: 'ניתוחי תלמידים', import_log: 'לוג ייבוא'
+};
+
+/* ─── סטטוס DB ─── */
+async function loadStatus() {
+  try {
+    const counts = await API.get('/backup/status');
+    const el = document.getElementById('statusList');
+    const rows = Object.entries(counts)
+      .filter(([, c]) => c > 0)
+      .map(([t, c]) => `
+        <div class="table-row">
+          <span style="color:#374151;">${tableNames[t] || t}</span>
+          <span class="count-badge">${c.toLocaleString('he-IL')} רשומות</span>
+        </div>`).join('');
+    el.innerHTML = rows || '<div style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">בסיס הנתונים ריק</div>';
+  } catch(e) {
+    document.getElementById('statusList').innerHTML =
+      '<div style="padding:12px;color:#dc2626;font-size:12px;">שגיאה בטעינה</div>';
+  }
+}
+
+/* ─── ייצוא ─── */
+async function exportBackup() {
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> מכין גיבוי...';
+  try {
+    const token = Auth.getToken();
+    const res = await fetch('/api/backup/export', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('שגיאה בייצוא');
+    const blob = await res.blob();
+    const date = new Date().toISOString().slice(0,10);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `herzliya-backup-${date}.json`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    const result = document.getElementById('exportResult');
+    result.style.display = 'block';
+    result.textContent = 'הגיבוי הורד בהצלחה — שמור את הקובץ במחשב שלך';
+  } catch(e) {
+    alert('שגיאה בייצוא: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-download"></i> הורד גיבוי עכשיו';
+  }
+}
+
+/* ─── בחירת קובץ ─── */
+function fileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      backupData = JSON.parse(e.target.result);
+      if (!backupData.tables) throw new Error('פורמט לא תקין');
+      document.getElementById('fileName').textContent =
+        ` ${file.name} (יוצא: ${backupData.exported_at ? new Date(backupData.exported_at).toLocaleString('he-IL') : 'לא ידוע'})`;
+      document.getElementById('fileInfo').style.display = 'block';
+      const btn = document.getElementById('importBtn');
+      btn.disabled = false; btn.style.opacity = '1';
+    } catch(err) {
+      alert('קובץ לא תקין: ' + err.message);
+      backupData = null;
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+/* ─── גרירת קבצים ─── */
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('fileInput').files = e.dataTransfer.files; fileSelected({ target: { files: [file] } }); }
+});
+
+/* ─── שחזור ─── */
+async function importBackup() {
+  if (!backupData) return;
+  if (!confirm('שחזור ידרוס נתונים קיימים באותן שורות. להמשיך?')) return;
+
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> משחזר...';
+
+  try {
+    const result = await fetch('/api/backup/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + Auth.getToken()
+      },
+      body: JSON.stringify({ tables: backupData.tables })
+    }).then(async r => {
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error || 'שגיאה');
+      return json;
+    });
+
+    const res = document.getElementById('importResult');
+    res.style.display = 'block';
+    res.className = 'alert alert-success';
+    res.textContent = `השחזור הושלם! ${result.total_rows.toLocaleString('he-IL')} רשומות שוחזרו`;
+
+    // הצג פירוט
+    const details = document.getElementById('importDetails');
+    details.style.display = 'block';
+    document.getElementById('importDetailsList').innerHTML =
+      Object.entries(result.results).map(([t, c]) => `
+        <div class="table-row">
+          <span>${tableNames[t] || t}</span>
+          <span class="${typeof c === 'number' ? 'count-badge' : ''}" style="${typeof c === 'string' ? 'color:#dc2626' : ''}">
+            ${typeof c === 'number' ? c.toLocaleString('he-IL') + ' רשומות' : c}
+          </span>
+        </div>`).join('');
+
+    await loadStatus();
+  } catch(e) {
+    const res = document.getElementById('importResult');
+    res.style.display = 'block';
+    res.className = 'alert alert-danger';
+    res.textContent = 'שגיאה בשחזור: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-upload"></i> שחזר נתונים';
+  }
+}
+
+loadStatus();
+</script>
+<script src="js/i18n.js"></script>
+</body>
+</html>
