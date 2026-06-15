@@ -15,7 +15,7 @@ function safeParseClaudeJSON(rawText, messageCount) {
   // הסר גדרות קוד אם יש
   let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 
-  // חלץ את ה-JSON הראשון
+  // חלץ את ה-JSON הראשון (גרסה מלאה)
   const match = cleaned.match(/\{[\s\S]*\}/);
   if (match) cleaned = match[0];
 
@@ -32,17 +32,42 @@ function safeParseClaudeJSON(rawText, messageCount) {
     return JSON.parse(fixed);
   } catch (_) {}
 
-  // פולבק: בנה אובייקט מינימלי מהטקסט הגולמי
-  const npsMatch = rawText.match(/"nps_score"\s*:\s*([\d.]+)/);
-  const levelMatch = rawText.match(/"satisfaction_level"\s*:\s*"(\w+)"/);
+  // תיקון: JSON שנחתך — נסה לסגור סוגריים פתוחים
+  try {
+    let truncFix = cleaned.trimEnd();
+    // הסר פסיק אחרון לפני סגירה
+    truncFix = truncFix.replace(/,\s*$/, '');
+    // ספור סוגריים פתוחים וסגור אותם
+    const opens = (truncFix.match(/\[/g) || []).length - (truncFix.match(/\]/g) || []).length;
+    const braces = (truncFix.match(/\{/g) || []).length - (truncFix.match(/\}/g) || []).length;
+    // סגור מחרוזת פתוחה אם יש
+    if ((truncFix.match(/"/g) || []).length % 2 !== 0) truncFix += '"';
+    for (let i = 0; i < opens; i++) truncFix += ']';
+    for (let i = 0; i < braces; i++) truncFix += '}';
+    return JSON.parse(truncFix);
+  } catch (_) {}
+
+  // פולבק: חלץ שדות בודדים מהטקסט הגולמי
+  const npsMatch    = rawText.match(/"nps_score"\s*:\s*([\d.]+)/);
+  const satMatch    = rawText.match(/"satisfaction_score"\s*:\s*([\d.]+)/);
+  const levelMatch  = rawText.match(/"satisfaction_level"\s*:\s*"(\w+)"/);
+  const summaryMatch= rawText.match(/"summary"\s*:\s*"([^"]{10,})"/);
+
+  const extractArray = (key) => {
+    const m = rawText.match(new RegExp(`"${key}"\\s*:\\s*\\[([^\\]]*?)\\]`));
+    if (!m) return [];
+    return m[1].match(/"([^"]+)"/g)?.map(s => s.replace(/"/g,'')) || [];
+  };
+
   return {
-    nps_score: npsMatch ? parseFloat(npsMatch[1]) : 3.0,
+    nps_score: npsMatch ? parseFloat(npsMatch[1]) : (satMatch ? parseFloat(satMatch[1]) : 3.0),
+    satisfaction_score: satMatch ? parseFloat(satMatch[1]) : (npsMatch ? parseFloat(npsMatch[1]) : 3.0),
     satisfaction_level: levelMatch ? levelMatch[1] : 'developing',
     message_count: messageCount,
-    summary: 'ניתוח הושלם (עיבוד JSON חלקי)',
-    positive_themes: [],
-    negative_themes: [],
-    recommendations: [],
+    summary: summaryMatch ? summaryMatch[1] : 'ניתוח הושלם (עיבוד JSON חלקי — הטקסט ארוך מדי)',
+    positive_themes: extractArray('positive_themes'),
+    negative_themes: extractArray('negative_themes'),
+    recommendations: extractArray('recommendations'),
     tasks: []
   };
 }
@@ -121,10 +146,14 @@ ${text}
 
   const response = await anthropic.messages.create({
     model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-    max_tokens: 2500,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]
   });
+
+  if (response.stop_reason === 'max_tokens') {
+    console.warn('analyzeRawText: תגובת Claude נחתכה — שקול לקצר את הטקסט');
+  }
 
   const rawText = response.content[0].text.trim();
   const result = safeParseClaudeJSON(rawText, lines);
@@ -236,10 +265,14 @@ ${text}
 
   const response = await anthropic.messages.create({
     model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
-    max_tokens: 2500,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]
   });
+
+  if (response.stop_reason === 'max_tokens') {
+    console.warn('analyzeStudentText: תגובת Claude נחתכה — שקול לקצר את הטקסט');
+  }
 
   const rawText = response.content[0].text.trim();
   const result = safeParseClaudeJSON(rawText, lines);
