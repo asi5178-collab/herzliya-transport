@@ -5,7 +5,12 @@
 <title>ניתוח תלמידים - הסעות הרצליה</title>
 <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <style>
+.input-tab-btn { flex:1; padding:8px 4px; border:none; background:#f8fafc; cursor:pointer; font-size:12px; font-family:inherit; color:#64748b; transition:all .15s; border-inline-end:1px solid #e2e8f0; }
+.input-tab-btn:last-child { border-inline-end:none; }
+.input-tab-btn:hover:not(.input-tab-active) { background:#f1f5f9; color:#374151; }
+.input-tab-active { background:white !important; color:#16a34a !important; font-weight:600; border-bottom:2px solid #16a34a !important; }
 .score-ring {
   width: 80px; height: 80px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -73,7 +78,7 @@
         <!-- עמודה שמאל: קלט + היסטוריה -->
         <div>
           <div class="card">
-            <div class="card-title"><i class="bi bi-chat-dots" style="color:#16a34a;"></i> הדבק טקסט WhatsApp קבוצת תלמידים</div>
+            <div class="card-title"><i class="bi bi-mortarboard" style="color:#16a34a;"></i> קלט לניתוח WhatsApp תלמידים</div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
               <div class="form-group" style="margin-bottom:0;">
@@ -91,11 +96,58 @@
               <input type="text" id="sourceGroup" class="form-control" placeholder='כגון: "תלמידי קו 1א"'>
             </div>
 
-            <div class="form-group" style="margin-bottom:12px;">
-              <label class="form-label">טקסט WhatsApp</label>
-              <textarea id="whatsappText" class="form-control" rows="10"
-                placeholder="הדבק כאן את הטקסט מקבוצת WhatsApp של התלמידים...&#10;&#10;לא צריך פורמט מיוחד — ניתן להדביק ישירות מהטלפון"></textarea>
-              <div id="charCount" style="font-size:11px;color:#94a3b8;margin-top:4px;">0 תווים</div>
+            <!-- טאבים שיטת קלט -->
+            <div style="display:flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:14px;">
+              <button id="tabPaste" onclick="switchInputTab('paste')" class="input-tab-btn input-tab-active">
+                <i class="bi bi-clipboard-text"></i> הדבקה ידנית
+              </button>
+              <button id="tabWord" onclick="switchInputTab('word')" class="input-tab-btn">
+                <i class="bi bi-file-word"></i> קובץ Word
+              </button>
+              <button id="tabApi" onclick="switchInputTab('api')" class="input-tab-btn">
+                <i class="bi bi-whatsapp"></i> WhatsApp API
+              </button>
+            </div>
+
+            <!-- Word upload zone -->
+            <div id="wordInputSection" style="display:none;margin-bottom:12px;">
+              <div id="wordDropZone"
+                style="border:2px dashed #86efac;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#f0fdf4;transition:all .15s;"
+                onclick="document.getElementById('wordFile').click()"
+                ondragover="event.preventDefault();this.style.borderColor='#16a34a';this.style.background='#dcfce7';"
+                ondragleave="this.style.borderColor='#86efac';this.style.background='#f0fdf4';"
+                ondrop="handleWordDrop(event)">
+                <i class="bi bi-file-word" style="font-size:32px;color:#16a34a;"></i>
+                <div style="font-weight:600;color:#16a34a;margin-top:6px;">גרור קובץ Word לכאן</div>
+                <div style="font-size:12px;color:#94a3b8;margin-top:4px;">או לחץ לבחירת קובץ .docx</div>
+                <input type="file" id="wordFile" accept=".docx" style="display:none;" onchange="handleWordFile(this.files[0])">
+              </div>
+              <div id="wordStatus" style="font-size:12px;margin-top:8px;min-height:18px;text-align:center;"></div>
+            </div>
+
+            <!-- WhatsApp API coming soon -->
+            <div id="apiInputSection" style="display:none;margin-bottom:12px;">
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:20px;line-height:1.7;">
+                <div style="font-size:22px;margin-bottom:6px;">💬</div>
+                <div style="font-weight:700;color:#15803d;font-size:14px;margin-bottom:8px;">חיבור WhatsApp API — בפיתוח</div>
+                <div style="font-size:12px;color:#374151;">
+                  <b>שלב 1:</b> WhatsApp Business API (Meta) — נדרש חשבון עסקי מאומת<br>
+                  <b>שלב 2:</b> Webhook שיקבל הודעות חדשות מהקבוצה בזמן אמת<br>
+                  <b>שלב 3:</b> ניתוח אוטומטי שבועי ושמירת תובנות<br>
+                  <br>
+                  <b>כחלופה:</b> ייצוא שיחה מ-WhatsApp (שתף ← ייצא צ'אט) והדבקה בטאב "הדבקה ידנית"
+                </div>
+              </div>
+            </div>
+
+            <!-- Textarea (נסתר בטאב API) -->
+            <div id="textareaSection">
+              <div class="form-group" style="margin-bottom:12px;">
+                <label class="form-label">טקסט WhatsApp</label>
+                <textarea id="whatsappText" class="form-control" rows="9"
+                  placeholder="הדבק כאן את הטקסט מקבוצת WhatsApp של התלמידים...&#10;&#10;לא צריך פורמט מיוחד — ניתן להדביק ישירות מהטלפון"></textarea>
+                <div id="charCount" style="font-size:11px;color:#94a3b8;margin-top:4px;">0 תווים</div>
+              </div>
             </div>
 
             <div id="inputAlert" style="display:none;margin-bottom:10px;" class="alert"></div>
@@ -390,6 +442,67 @@ function formatDate(s) {
 }
 
 // API.post ו-API.del כבר מוגדרים ב-api.js
+
+/* ─── שיטת קלט ─── */
+function switchInputTab(tab) {
+  ['paste','word','api'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1))
+      .classList.toggle('input-tab-active', t === tab);
+  });
+  document.getElementById('wordInputSection').style.display = tab === 'word' ? 'block' : 'none';
+  document.getElementById('apiInputSection').style.display  = tab === 'api'  ? 'block' : 'none';
+  document.getElementById('textareaSection').style.display  = tab === 'api'  ? 'none'  : 'block';
+  document.getElementById('analyzeBtn').disabled = tab === 'api';
+}
+
+function handleWordDrop(event) {
+  event.preventDefault();
+  event.currentTarget.style.borderColor = '#86efac';
+  event.currentTarget.style.background = '#f0fdf4';
+  const file = event.dataTransfer.files[0];
+  if (file) handleWordFile(file);
+}
+
+async function handleWordFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.docx')) {
+    document.getElementById('wordStatus').innerHTML = '<span style="color:#dc2626;">נא לבחור קובץ .docx</span>';
+    return;
+  }
+  const statusEl = document.getElementById('wordStatus');
+  statusEl.innerHTML = '<i class="bi bi-hourglass-split" style="color:#16a34a;"></i> מחלץ טקסט...';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value.trim();
+    if (!text) throw new Error('לא נמצא טקסט בקובץ');
+    document.getElementById('whatsappText').value = text;
+    const wk = detectWeekFromText(text), dt = detectDateFromText(text);
+    if (wk) document.getElementById('weekNumber').value = wk;
+    if (dt) document.getElementById('weekDate').value = dt;
+    let msg = `<i class="bi bi-check-circle" style="color:#16a34a;"></i> טעון: ${text.length.toLocaleString()} תווים`;
+    if (wk) msg += ` &nbsp;|&nbsp; שבוע ${wk} זוהה`;
+    if (dt) msg += ` &nbsp;|&nbsp; תאריך זוהה`;
+    statusEl.innerHTML = msg;
+  } catch(e) {
+    statusEl.innerHTML = `<span style="color:#dc2626;"><i class="bi bi-x-circle"></i> ${e.message}</span>`;
+  }
+}
+
+function detectWeekFromText(text) {
+  let m = text.match(/שבוע\s+(?:מספר\s+)?(\d{1,2})/);
+  if (m) return parseInt(m[1]);
+  m = text.match(/\bW[-\s]?(\d{1,2})\b/i);
+  if (m) return parseInt(m[1]);
+  return null;
+}
+
+function detectDateFromText(text) {
+  let m = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) m = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return null;
+}
 
 loadHistory();
 </script>
