@@ -125,7 +125,8 @@ const Auth = {
   requireAuth() {
     if (!this.isLoggedIn()) { window.location.href = '/login.html'; return false; }
     return true;
-  }
+  },
+  getToken() { return localStorage.getItem('token'); }
 };
 
 // Toast notifications
