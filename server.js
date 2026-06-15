@@ -18,7 +18,26 @@ try {
   const migrations = [
     "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'שיפור'",
     "ALTER TABLE tasks ADD COLUMN stakeholder TEXT DEFAULT 'מנהל הסעות'",
-    "ALTER TABLE tasks ADD COLUMN week_number INTEGER"
+    "ALTER TABLE tasks ADD COLUMN week_number INTEGER",
+    `CREATE TABLE IF NOT EXISTS student_analysis (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      week_date DATE NOT NULL,
+      week_number INTEGER,
+      source_group TEXT DEFAULT 'קבוצת תלמידים',
+      satisfaction_score REAL,
+      satisfaction_level TEXT,
+      positive_themes TEXT,
+      negative_themes TEXT,
+      student_insights TEXT,
+      recommendations TEXT,
+      tasks TEXT,
+      summary_hebrew TEXT,
+      raw_analysis TEXT,
+      message_count INTEGER DEFAULT 0,
+      model_used TEXT DEFAULT 'claude-sonnet-4-6',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(week_date)
+    )`
   ];
   for (const sql of migrations) { try { _mdb.exec(sql); } catch {} }
   _mdb.close();
@@ -56,6 +75,7 @@ app.use('/api/import', require('./src/routes/import'));
 app.use('/api/tasks', require('./src/routes/tasks'));
 app.use('/api/users', require('./src/routes/users'));
 app.use('/api/reports', require('./src/routes/reports'));
+app.use('/api/student-analysis', require('./src/routes/student-analysis'));
 
 // Health check
 app.get('/api/health', (req, res) => {

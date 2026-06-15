@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניתוח תלמידים - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.score-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; color: white;
+  flex-shrink: 0;
+}
+.tag { display:inline-block; padding:3px 10px; border-radius:14px; font-size:12px; margin:2px; }
+.tag-green  { background:#dcfce7; color:#16a34a; }
+.tag-red    { background:#fee2e2; color:#dc2626; }
+.tag-blue   { background:#dbeafe; color:#1d4ed8; }
+.tag-purple { background:#f3e8ff; color:#7c3aed; }
+.history-item {
+  padding:12px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background .15s;
+}
+.history-item:hover { background:#f8fafc; }
+.history-item.active { background:#ecfdf5; border-right:3px solid #16a34a; }
+.section-title {
+  font-weight:700; font-size:13px; margin:16px 0 8px;
+  display:flex; align-items:center; gap:6px;
+}
+.task-row {
+  display:grid; grid-template-columns:auto 1fr auto auto;
+  gap:10px; align-items:center; padding:8px 12px;
+  border-bottom:1px solid #f1f5f9; font-size:13px;
+}
+.pri-badge {
+  padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp הורים</a>
+      <a href="student-analysis.html" class="nav-link active"><i class="bi bi-mortarboard"></i> ניתוח WhatsApp תלמידים</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+      <a href="users.html" class="nav-link"><i class="bi bi-people-fill"></i> ניהול משתמשים</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-mortarboard" style="color:#16a34a;"></i> ניתוח WhatsApp קבוצות תלמידים | Claude AI</div>
+      <span id="userBadge" style="font-size:13px;color:#64748b;"></span>
+    </div>
+
+    <div id="page-content">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- עמודה שמאל: קלט + היסטוריה -->
+        <div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-chat-dots" style="color:#16a34a;"></i> הדבק טקסט WhatsApp קבוצת תלמידים</div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">תאריך שבוע</label>
+                <input type="date" id="weekDate" class="form-control">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">מספר שבוע</label>
+                <input type="number" id="weekNumber" class="form-control" placeholder="כגון: 22">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">שם הקבוצה (אופציונלי)</label>
+              <input type="text" id="sourceGroup" class="form-control" placeholder='כגון: "תלמידי קו 1א"'>
+            </div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">טקסט WhatsApp</label>
+              <textarea id="whatsappText" class="form-control" rows="10"
+                placeholder="הדבק כאן את הטקסט מקבוצת WhatsApp של התלמידים...&#10;&#10;לא צריך פורמט מיוחד — ניתן להדביק ישירות מהטלפון"></textarea>
+              <div id="charCount" style="font-size:11px;color:#94a3b8;margin-top:4px;">0 תווים</div>
+            </div>
+
+            <div id="inputAlert" style="display:none;margin-bottom:10px;" class="alert"></div>
+
+            <button id="analyzeBtn" onclick="analyze()" class="btn btn-primary" style="background:#16a34a;border-color:#16a34a;width:100%;">
+              <i class="bi bi-robot"></i> נתח עם Claude AI
+            </button>
+          </div>
+
+          <!-- היסטוריה -->
+          <div class="card" style="padding:0;overflow:hidden;margin-top:0;">
+            <div style="padding:14px 16px;font-weight:600;font-size:13px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+              <span><i class="bi bi-clock-history"></i> היסטוריה</span>
+              <span id="historyCount" style="font-size:11px;color:#94a3b8;"></span>
+            </div>
+            <div id="historyList" style="max-height:320px;overflow-y:auto;">
+              <div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">טוען...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- עמודה ימין: תוצאות -->
+        <div>
+          <div id="resultPlaceholder" class="card" style="text-align:center;padding:60px 20px;color:#94a3b8;">
+            <div style="font-size:48px;margin-bottom:12px;">🎓</div>
+            <div style="font-size:14px;">הדבק טקסט ולחץ ניתוח, או בחר שבוע מההיסטוריה</div>
+          </div>
+
+          <div id="resultArea" style="display:none;">
+
+            <!-- כרטיס ציון -->
+            <div class="card" id="scoreCard">
+              <div style="display:flex;gap:20px;align-items:center;">
+                <div id="scoreRing" class="score-ring">-</div>
+                <div style="flex:1;">
+                  <div style="font-size:18px;font-weight:700;" id="resultTitle">ניתוח תלמידים</div>
+                  <div style="font-size:13px;color:#64748b;" id="resultMeta"></div>
+                  <div style="margin-top:8px;" id="resultLevel"></div>
+                </div>
+                <button onclick="deleteAnalysis()" id="delBtn" class="btn" style="background:#fee2e2;color:#dc2626;border:none;font-size:12px;display:none;">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+              <div id="resultSummary" style="margin-top:14px;font-size:13px;line-height:1.8;color:#374151;background:#f0fdf4;border-right:3px solid #16a34a;padding:10px 14px;border-radius:0 6px 6px 0;"></div>
+            </div>
+
+            <!-- תובנות תלמידים -->
+            <div class="card" id="insightsCard">
+              <div class="card-title"><i class="bi bi-mortarboard" style="color:#16a34a;"></i> תובנות ייחודיות לתלמידים</div>
+              <div id="insightsList"></div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;">
+                <div>
+                  <div class="section-title"><i class="bi bi-hand-thumbs-up" style="color:#16a34a;"></i> מה עובד טוב</div>
+                  <div id="positiveList"></div>
+                </div>
+                <div>
+                  <div class="section-title"><i class="bi bi-exclamation-triangle" style="color:#dc2626;"></i> בעיות שמועלות</div>
+                  <div id="negativeList"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- המלצות -->
+            <div class="card" id="recsCard">
+              <div class="card-title"><i class="bi bi-lightbulb" style="color:#d97706;"></i> המלצות לשיפור</div>
+              <div id="recsList"></div>
+            </div>
+
+            <!-- משימות שנוצרו -->
+            <div class="card" id="tasksCard">
+              <div class="card-title"><i class="bi bi-check2-square" style="color:#7c3aed;"></i> משימות שנוצרו</div>
+              <div id="tasksList"></div>
+              <div style="margin-top:10px;font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+                <i class="bi bi-info-circle"></i> משימות נוספו אוטומטית לרשימת המשימות הכללית
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+if (!Auth.requireAuth()) {}
+const isAdmin = Auth.hasRole('admin');
+let currentWeekDate = null;
+
+document.getElementById('userBadge').textContent = Auth.getUser()?.username || '';
+
+// ספירת תווים
+document.getElementById('whatsappText').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length.toLocaleString('he-IL') + ' תווים | ' +
+    this.value.split('\n').filter(l => l.trim()).length + ' שורות';
+});
+
+// תאריך ברירת מחדל — ראשון האחרון
+(function() {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  document.getElementById('weekDate').value = d.toISOString().split('T')[0];
+})();
+
+/* ─── API ─── */
+const SA = {
+  analyze: (d)     => API.post('/student-analysis/analyze', d),
+  history: ()      => API.get('/student-analysis/history'),
+  week:    (date)  => API.get(`/student-analysis/week/${date}`),
+  delete:  (date)  => API.del(`/student-analysis/week/${date}`)
+};
+
+/* ─── טעינת היסטוריה ─── */
+async function loadHistory() {
+  try {
+    const rows = await SA.history();
+    document.getElementById('historyCount').textContent = rows.length + ' ניתוחים';
+    const el = document.getElementById('historyList');
+    if (!rows.length) {
+      el.innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:13px;">אין ניתוחים עדיין</div>';
+      return;
+    }
+    el.innerHTML = rows.map(r => {
+      const lvl = levelInfo(r.satisfaction_level);
+      return `<div class="history-item ${currentWeekDate === r.week_date ? 'active' : ''}"
+               onclick="loadWeek('${r.week_date}')" data-date="${r.week_date}">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:600;font-size:13px;">שבוע ${r.week_number || ''} — ${formatDate(r.week_date)}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px;">${r.source_group || ''} | ${r.message_count} שורות</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:${lvl.color};">${r.satisfaction_score ? Number(r.satisfaction_score).toFixed(1) : '-'}</div>
+            <div style="font-size:10px;color:${lvl.color};">${lvl.label}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('historyList').innerHTML =
+      '<div style="padding:16px;color:#dc2626;font-size:12px;">שגיאה בטעינה</div>';
+  }
+}
+
+/* ─── ניתוח ─── */
+async function analyze() {
+  if (!isAdmin) { showAlert('רק מנהל יכול לבצע ניתוח', 'warning'); return; }
+  const weekDate   = document.getElementById('weekDate').value;
+  const weekNumber = document.getElementById('weekNumber').value;
+  const text       = document.getElementById('whatsappText').value.trim();
+  const sourceGroup = document.getElementById('sourceGroup').value.trim();
+
+  if (!weekDate) { showAlert('יש לבחור תאריך שבוע', 'warning'); return; }
+  if (text.length < 10) { showAlert('יש להדביק טקסט (לפחות 10 תווים)', 'warning'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> מנתח עם Claude...';
+  showAlert('', '');
+
+  try {
+    const res = await SA.analyze({ week_date: weekDate, week_number: weekNumber || null, text, source_group: sourceGroup });
+    currentWeekDate = weekDate;
+    renderResult(res.result, weekDate, weekNumber, sourceGroup);
+    await loadHistory();
+    showAlert('הניתוח הושלם בהצלחה', 'success');
+  } catch(err) {
+    showAlert(err.message, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-robot"></i> נתח עם Claude AI';
+  }
+}
+
+/* ─── טעינת שבוע מהיסטוריה ─── */
+async function loadWeek(date) {
+  try {
+    currentWeekDate = date;
+    document.querySelectorAll('.history-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.date === date);
+    });
+    const data = await SA.week(date);
+    renderResult(data, data.week_date, data.week_number, data.source_group);
+  } catch(e) {
+    showAlert('שגיאה בטעינת הנתונים', 'danger');
+  }
+}
+
+/* ─── מחיקה ─── */
+async function deleteAnalysis() {
+  if (!currentWeekDate || !confirm('למחוק ניתוח זה?')) return;
+  try {
+    await SA.delete(currentWeekDate);
+    currentWeekDate = null;
+    document.getElementById('resultPlaceholder').style.display = 'block';
+    document.getElementById('resultArea').style.display = 'none';
+    await loadHistory();
+  } catch(e) { showAlert('שגיאה במחיקה', 'danger'); }
+}
+
+/* ─── רינדור תוצאות ─── */
+function renderResult(r, weekDate, weekNumber, sourceGroup) {
+  document.getElementById('resultPlaceholder').style.display = 'none';
+  document.getElementById('resultArea').style.display = 'block';
+
+  const lvl = levelInfo(r.satisfaction_level);
+  const score = r.satisfaction_score || r.nps_score || 0;
+
+  // ציון
+  const ring = document.getElementById('scoreRing');
+  ring.textContent = score ? Number(score).toFixed(1) : '-';
+  ring.style.background = lvl.color;
+
+  document.getElementById('resultTitle').textContent =
+    `ניתוח תלמידים — שבוע ${weekNumber || ''} (${formatDate(weekDate)})`;
+  document.getElementById('resultMeta').textContent =
+    (sourceGroup || 'קבוצת תלמידים') + (r.message_count ? ` | ${r.message_count} שורות` : '');
+  document.getElementById('resultLevel').innerHTML =
+    `<span class="tag" style="background:${lvl.bg};color:${lvl.color};">${lvl.label}</span>`;
+  document.getElementById('resultSummary').textContent = r.summary || r.summary_hebrew || '';
+
+  // תובנות ייחודיות
+  const insights = r.student_insights || [];
+  document.getElementById('insightsList').innerHTML = insights.length
+    ? insights.map(i => `<div style="padding:6px 0;font-size:13px;display:flex;gap:8px;align-items:flex-start;">
+        <i class="bi bi-arrow-left-short" style="color:#16a34a;margin-top:2px;flex-shrink:0;"></i>
+        <span>${i}</span></div>`).join('')
+    : '<div style="color:#94a3b8;font-size:13px;">לא זוהו תובנות ייחודיות</div>';
+
+  // חיובי / שלילי
+  document.getElementById('positiveList').innerHTML =
+    (r.positive_themes || []).map(t => `<span class="tag tag-green">${t}</span>`).join('') || '<span style="font-size:12px;color:#94a3b8;">אין</span>';
+  document.getElementById('negativeList').innerHTML =
+    (r.negative_themes || []).map(t => `<span class="tag tag-red">${t}</span>`).join('') || '<span style="font-size:12px;color:#94a3b8;">אין</span>';
+
+  // המלצות
+  document.getElementById('recsList').innerHTML = (r.recommendations || []).length
+    ? (r.recommendations || []).map((rec, i) => `
+      <div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;align-items:flex-start;">
+        <span style="background:#fef9c3;color:#854d0e;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${i+1}</span>
+        <span>${rec}</span>
+      </div>`).join('')
+    : '<div style="color:#94a3b8;font-size:13px;">אין המלצות</div>';
+
+  // משימות
+  const priLabel = { high:'גבוהה', medium:'בינונית', low:'נמוכה' };
+  const priColor = { high:'#dc2626', medium:'#d97706', low:'#16a34a' };
+  const tasks = r.tasks || [];
+  document.getElementById('tasksList').innerHTML = tasks.length
+    ? `<div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+        ${tasks.map((t, i) => `
+        <div class="task-row" style="background:${i%2===0?'white':'#f8fafc'};">
+          <span class="pri-badge" style="background:${priColor[t.priority]||'#64748b'}20;color:${priColor[t.priority]||'#64748b'};">${priLabel[t.priority]||t.priority}</span>
+          <div>
+            <div style="font-weight:600;">${t.title}</div>
+            ${t.description ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${t.description}</div>` : ''}
+          </div>
+          <span style="font-size:11px;color:#64748b;white-space:nowrap;">${t.stakeholder||''}</span>
+          <span style="font-size:11px;color:#94a3b8;white-space:nowrap;">${t.deadline ? formatDate(t.deadline) : ''}</span>
+        </div>`).join('')}
+      </div>`
+    : '<div style="color:#94a3b8;font-size:13px;">לא נוצרו משימות</div>';
+
+  document.getElementById('delBtn').style.display = isAdmin ? 'inline-flex' : 'none';
+}
+
+/* ─── עזר ─── */
+function levelInfo(level) {
+  const map = {
+    excellent: { label:'מצוין',   color:'#16a34a', bg:'#dcfce7' },
+    good:      { label:'טוב',     color:'#2563eb', bg:'#dbeafe' },
+    developing:{ label:'בפיתוח', color:'#d97706', bg:'#fef9c3' },
+    critical:  { label:'קריטי',   color:'#dc2626', bg:'#fee2e2' }
+  };
+  return map[level] || { label: level || '', color:'#64748b', bg:'#f1f5f9' };
+}
+
+function showAlert(msg, type) {
+  const el = document.getElementById('inputAlert');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.className = `alert alert-${type}`;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function formatDate(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  return isNaN(d) ? s : d.toLocaleDateString('he-IL');
+}
+
+/* ─── הוסף post ל-API ─── */
+API.post = (path, data) => fetch('/api' + path, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + Auth.getToken() },
+  body: JSON.stringify(data)
+}).then(async r => {
+  const json = await r.json();
+  if (!r.ok) throw new Error(json.error || 'שגיאה');
+  return json;
+});
+
+API.del = (path) => fetch('/api' + path, {
+  method: 'DELETE',
+  headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+}).then(async r => {
+  const json = await r.json();
+  if (!r.ok) throw new Error(json.error || 'שגיאה');
+  return json;
+});
+
+loadHistory();
+</script>
+<script src="js/i18n.js"></script>
+</body>
+</html>

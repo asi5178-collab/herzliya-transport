@@ -180,4 +180,72 @@ async function optimizeRoute(lineData, studentLocations) {
   return response.content[0].text;
 }
 
-module.exports = { analyzeRawText, generateWeeklyReport, optimizeRoute };
+// =====================================================================
+// ניתוח טקסט WhatsApp קבוצות תלמידים
+// =====================================================================
+async function analyzeStudentText(text, weekDate, weekNumber, contextData = {}) {
+  const anthropic = getClient();
+  const lines = text.split('\n').filter(l => l.trim().length > 2).length;
+
+  const systemPrompt = `אתה מנתח מומחה לחווית תלמידים בתחבורה עירונית - עיריית הרצליה.
+אתה מקבל טקסט מקבוצת WhatsApp של תלמידים (תיכוניסטים) שמשתמשים בשירות ההסעות.
+שים לב: זו פרספקטיבת התלמידים — שונה מפרספקטיבת ההורים.
+תפקידך: לנתח את חווית התלמידים ולהפיק תובנות ומשימות לשיפור שירות ההסעות.
+
+בעלי עניין: ${STAKEHOLDERS.join(' | ')}
+שבוע ${weekNumber || '?'} (${weekDate})
+החזר JSON בלבד.`;
+
+  const userPrompt = `נתח את הטקסט הבא מקבוצת WhatsApp של תלמידים שמשתמשים בהסעות:
+
+---
+${text}
+---
+
+החזר JSON בדיוק בפורמט הזה (כל השדות בעברית):
+{
+  "satisfaction_score": 3.5,
+  "satisfaction_level": "developing",
+  "message_count": ${lines},
+  "summary": "סיכום 2-3 משפטים על חווית התלמידים",
+  "positive_themes": ["דבר שהתלמידים אוהבים 1", "דבר שהתלמידים אוהבים 2"],
+  "negative_themes": ["בעיה שהתלמידים מעלים 1", "בעיה שהתלמידים מעלים 2"],
+  "student_insights": ["תובנה ייחודית לתלמידים 1", "תובנה ייחודית 2"],
+  "recommendations": ["המלצה מעשית 1", "המלצה 2", "המלצה 3"],
+  "tasks": [
+    {
+      "title": "כותרת משימה קצרה",
+      "description": "מה בדיוק לעשות",
+      "priority": "high",
+      "deadline": "${getDeadline(weekDate, 2)}",
+      "stakeholder": "ערן ראובני",
+      "category": "שיפור"
+    }
+  ],
+  "key_quotes": ["ציטוט מייצג של תלמיד 1", "ציטוט מייצג 2"],
+  "main_topics": ["נושא עיקרי 1", "נושא עיקרי 2", "נושא עיקרי 3"]
+}
+
+חוקים חשובים:
+- satisfaction_level חייב להיות: critical | developing | good | excellent
+- priority: high | medium | low
+- category: שיפור | שימור | ביצוע
+- stakeholder חייב להיות מ: ${STAKEHOLDERS.join(' | ')}
+- צור 2-4 משימות ממוקדות בחווית התלמידים
+- הפרד בין מה שהורים אומרים לבין מה שתלמידים חווים בפועל`;
+
+  const response = await anthropic.messages.create({
+    model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+    max_tokens: 2500,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userPrompt }]
+  });
+
+  const rawText = response.content[0].text.trim();
+  const result = safeParseClaudeJSON(rawText, lines);
+  result.raw_analysis = rawText;
+  result.model_used = response.model;
+  return result;
+}
+
+module.exports = { analyzeRawText, analyzeStudentText, generateWeeklyReport, optimizeRoute };
