@@ -229,9 +229,8 @@ async function exportBackup() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> מכין גיבוי...';
   try {
-    const token = Auth.getToken();
     const res = await fetch('/api/backup/export', {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
     });
     if (!res.ok) throw new Error('שגיאה בייצוא');
     const blob = await res.blob();
@@ -299,7 +298,7 @@ async function importBackup() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + Auth.getToken()
+        'Authorization': 'Bearer ' + localStorage.getItem('token')
       },
       body: JSON.stringify({ tables: backupData.tables })
     }).then(async r => {
