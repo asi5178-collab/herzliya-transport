@@ -256,6 +256,7 @@ async function exportBackup() {
 function fileSelected(event) {
   const file = event.target.files[0];
   if (!file) return;
+  event.target.value = ''; // איפוס כדי שאותו קובץ יוכל להיטען שוב
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
