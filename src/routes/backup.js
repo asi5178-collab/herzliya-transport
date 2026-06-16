@@ -42,6 +42,9 @@ router.post('/import', requireRole('admin'), (req, res) => {
   const results = {};
   let totalRows = 0;
 
+  // כיבוי FK זמני כדי למנוע בעיות סדר ייבוא
+  try { db.exec('PRAGMA foreign_keys = OFF'); } catch {}
+
   try {
     db.transaction(() => {
       for (const tableName of TABLES) {
@@ -56,12 +59,13 @@ router.post('/import', requireRole('admin'), (req, res) => {
           const stmt = db.prepare(sql);
           let count = 0;
           for (const row of rows) {
-            stmt.run(cols.map(c => row[c] !== undefined ? row[c] : null));
+            stmt.run(...cols.map(c => row[c] !== undefined ? row[c] : null));
             count++;
           }
           results[tableName] = count;
           totalRows += count;
         } catch (e) {
+          console.error(`[backup] import error in ${tableName}:`, e.message);
           results[tableName] = `שגיאה: ${e.message}`;
         }
       }
@@ -69,7 +73,10 @@ router.post('/import', requireRole('admin'), (req, res) => {
 
     res.json({ success: true, total_rows: totalRows, results });
   } catch (e) {
+    console.error('[backup] transaction error:', e.message);
     res.status(500).json({ error: `שגיאת שחזור: ${e.message}` });
+  } finally {
+    try { db.exec('PRAGMA foreign_keys = ON'); } catch {}
   }
 });
 

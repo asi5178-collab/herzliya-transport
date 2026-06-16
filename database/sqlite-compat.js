@@ -15,9 +15,19 @@ function toNum(row) {
 
 class Statement {
   constructor(stmt) { this._s = stmt; }
-  run(...args) { return this._s.run(...args); }
-  get(...args) { return toNum(this._s.get(...args)); }
-  all(...args) { return (this._s.all(...args) || []).map(toNum); }
+  run(...args) {
+    // node:sqlite requires spread; better-sqlite3 accepted run([array]) but node:sqlite does not
+    if (args.length === 1 && Array.isArray(args[0])) return this._s.run(...args[0]);
+    return this._s.run(...args);
+  }
+  get(...args) {
+    if (args.length === 1 && Array.isArray(args[0])) return toNum(this._s.get(...args[0]));
+    return toNum(this._s.get(...args));
+  }
+  all(...args) {
+    if (args.length === 1 && Array.isArray(args[0])) return (this._s.all(...args[0]) || []).map(toNum);
+    return (this._s.all(...args) || []).map(toNum);
+  }
 }
 
 class Database {
