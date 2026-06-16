@@ -119,6 +119,8 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
        created_at DESC`
   ).all();
 
+  const sa = db.prepare('SELECT * FROM student_analysis WHERE week_date = ?').get(week_date);
+
   const report = buildHTMLReport({
     week_date, week_number: analysis.week_number,
     nps_score: analysis.nps_score, satisfaction_level: analysis.satisfaction_level,
@@ -127,7 +129,16 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
     posThemes: JSON.parse(analysis.positive_themes || '[]'),
     negThemes: JSON.parse(analysis.negative_themes || '[]'),
     recommendations: JSON.parse(analysis.recommendations || '[]'),
-    openTasks
+    openTasks,
+    student: sa ? {
+      score: sa.satisfaction_score,
+      level: sa.satisfaction_level,
+      summary: sa.summary_hebrew,
+      source_group: sa.source_group || 'קבוצת תלמידים',
+      insights: JSON.parse(sa.student_insights || '[]'),
+      posThemes: JSON.parse(sa.positive_themes || '[]'),
+      negThemes: JSON.parse(sa.negative_themes || '[]')
+    } : null
   });
 
   const title = `דוח שבועי שבוע ${analysis.week_number || ''} (${week_date})`.trim();
@@ -201,10 +212,10 @@ function buildHTMLReport(d) {
     <div style="margin-top:14px;font-size:13px;background:rgba(255,255,255,0.18);display:inline-block;padding:5px 22px;border-radius:20px;">שבוע ${d.week_number || ''} &nbsp;|&nbsp; ${dateStr}</div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+  <div style="display:grid;grid-template-columns:repeat(${d.student ? 4 : 3},1fr);gap:16px;margin-bottom:24px;">
     <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #2563eb;">
       <div style="font-size:30px;font-weight:800;color:#2563eb;">${d.nps_score ? Number(d.nps_score).toFixed(1) : 'N/A'}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:4px;">ציון NPS (מתוך 5)</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">NPS הורים (מתוך 5)</div>
     </div>
     <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #16a34a;">
       <div style="font-size:30px;font-weight:800;color:#16a34a;">${d.avg_rup ? d.avg_rup + '%' : 'N/A'}</div>
@@ -212,8 +223,16 @@ function buildHTMLReport(d) {
     </div>
     <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid ${satColor};">
       <div style="font-size:30px;font-weight:800;color:${satColor};">${satLabel}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:4px;">רמת שביעות רצון</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">רמת שביעות הורים</div>
     </div>
+    ${d.student ? (() => {
+      const stuMap = { excellent: ['מצוין','#16a34a'], good: ['טוב','#2563eb'], developing: ['בפיתוח','#d97706'], critical: ['קריטי','#dc2626'] };
+      const [sLabel, sColor] = stuMap[d.student.level] || [d.student.level || 'N/A', '#64748b'];
+      return `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #7c3aed;">
+        <div style="font-size:30px;font-weight:800;color:#7c3aed;">${d.student.score ? Number(d.student.score).toFixed(1) : sLabel}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:4px;">שביעות תלמידים (מתוך 5)</div>
+      </div>`;
+    })() : ''}
   </div>
 
   ${d.summary ? `<div style="background:#f8fafc;border-right:4px solid #2563eb;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:24px;font-size:14px;line-height:1.85;color:#334155;">${d.summary}</div>` : ''}
@@ -230,8 +249,29 @@ function buildHTMLReport(d) {
   </div>
 
   ${d.recommendations.length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:24px;">
-    <div style="font-weight:700;color:#7c3aed;margin-bottom:12px;font-size:14px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">המלצות לפעולה</div>
+    <div style="font-weight:700;color:#7c3aed;margin-bottom:12px;font-size:14px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">המלצות לפעולה — הורים</div>
     <ul style="margin:0;padding-right:18px;font-size:13px;">${d.recommendations.map(li).join('')}</ul>
+  </div>` : ''}
+
+  ${d.student ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin-bottom:24px;border-right:4px solid #7c3aed;">
+    <div style="font-weight:700;color:#7c3aed;margin-bottom:12px;font-size:14px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">
+      🎓 ניתוח קבוצת תלמידים — ${d.student.source_group}
+    </div>
+    ${d.student.summary ? `<div style="background:#faf5ff;border-right:3px solid #7c3aed;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:14px;font-size:13px;line-height:1.85;color:#374151;">${d.student.summary}</div>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;">
+      ${d.student.posThemes?.length ? `<div>
+        <div style="font-weight:700;color:#16a34a;font-size:12px;margin-bottom:6px;">חיובי בעיני התלמידים</div>
+        <ul style="margin:0;padding-right:16px;font-size:12px;">${d.student.posThemes.map(t => `<li style="padding:3px 0;color:#374151;">${t}</li>`).join('')}</ul>
+      </div>` : ''}
+      ${d.student.negThemes?.length ? `<div>
+        <div style="font-weight:700;color:#dc2626;font-size:12px;margin-bottom:6px;">בעיות שמועלות</div>
+        <ul style="margin:0;padding-right:16px;font-size:12px;">${d.student.negThemes.map(t => `<li style="padding:3px 0;color:#374151;">${t}</li>`).join('')}</ul>
+      </div>` : ''}
+    </div>
+    ${d.student.insights?.length ? `<div>
+      <div style="font-weight:700;color:#7c3aed;font-size:12px;margin-bottom:6px;">תובנות ייחודיות לתלמידים</div>
+      ${d.student.insights.map(ins => `<div style="display:flex;gap:8px;padding:4px 0;font-size:12px;"><span style="color:#7c3aed;flex-shrink:0;">◆</span><span style="color:#374151;">${ins}</span></div>`).join('')}
+    </div>` : ''}
   </div>` : ''}
 
   <div style="margin-bottom:24px;">

@@ -101,7 +101,7 @@
           <div class="chart-wrapper"><canvas id="rupChart"></canvas></div>
         </div>
         <div class="card">
-          <div class="card-title"><i class="bi bi-heart-pulse" style="color:#16a34a;"></i> מגמת NPS הורים (1-5)</div>
+          <div class="card-title"><i class="bi bi-heart-pulse" style="color:#16a34a;"></i> מגמת NPS הורים ותלמידים (1-5)</div>
           <div class="chart-wrapper"><canvas id="npsChart"></canvas></div>
         </div>
       </div>
@@ -156,8 +156,9 @@ const RUP_TARGETS = { q2: 10, q4: 30, year2: 40 };
 
 async function loadDashboard() {
   try {
-    const [summary, rupTrend, npsTrend, corr, weekly, tasks] = await Promise.all([
-      API.summary(), API.rupTrend(), API.npsTrend(), API.correlation(), API.weeklySummary(), API.openTasks()
+    const [summary, rupTrend, npsTrend, corr, weekly, tasks, studentTrend] = await Promise.all([
+      API.summary(), API.rupTrend(), API.npsTrend(), API.correlation(), API.weeklySummary(), API.openTasks(),
+      API.get('/student-analysis/history').catch(() => [])
     ]);
 
     // KPIs
@@ -207,30 +208,35 @@ async function loadDashboard() {
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true } } }, scales: { y: { beginAtZero: true, max: 50, title: { display: true, text: 'RUP %' } } } }
     });
 
-    // NPS Chart — filter null week_numbers
+    // NPS + Student satisfaction chart
     const validNps = npsTrend.filter(n => n.week_number != null && n.nps_score != null);
+    const validStu = (studentTrend || []).filter(s => s.week_number != null && s.satisfaction_score != null);
+    const allNpsWeeks = [...new Set([...validNps.map(n => n.week_number), ...validStu.map(s => s.week_number)])].sort((a,b)=>a-b);
+    const npsScoreMap = Object.fromEntries(validNps.map(n => [n.week_number, n.nps_score]));
+    const stuScoreMap = Object.fromEntries(validStu.map(s => [s.week_number, s.satisfaction_score]));
     new Chart(document.getElementById('npsChart'), {
       type: 'line',
       data: {
-        labels: validNps.map(n => `W-${n.week_number}`),
+        labels: allNpsWeeks.map(w => `W-${w}`),
         datasets: [{
           label: 'NPS הורים',
-          data: validNps.map(n => n.nps_score),
+          data: allNpsWeeks.map(w => npsScoreMap[w] ?? null),
           borderColor: '#16a34a', backgroundColor: '#16a34a20',
-          tension: 0.4, fill: true, pointRadius: 6, pointHoverRadius: 9,
-          pointBackgroundColor: validNps.map(n => {
-            if (n.nps_score >= 4) return '#16a34a';
-            if (n.nps_score >= 3.5) return '#2563eb';
-            if (n.nps_score >= 2.5) return '#d97706';
-            return '#dc2626';
-          })
+          tension: 0.4, fill: true, pointRadius: 6, pointHoverRadius: 9, spanGaps: true,
+          pointBackgroundColor: '#16a34a'
+        }, {
+          label: 'שביעות תלמידים',
+          data: allNpsWeeks.map(w => stuScoreMap[w] ?? null),
+          borderColor: '#7c3aed', backgroundColor: '#7c3aed10',
+          tension: 0.4, fill: false, pointRadius: 6, pointHoverRadius: 9, spanGaps: true,
+          pointBackgroundColor: '#7c3aed'
         }, {
           label: 'סף טוב (3.5)',
-          data: Array(validNps.length).fill(3.5),
+          data: Array(allNpsWeeks.length).fill(3.5),
           borderColor: '#d97706', borderDash: [5,5], pointRadius: 0, borderWidth: 1.5
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { y: { min: 1, max: 5, title: { display: true, text: 'NPS (1-5)' } } } }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { y: { min: 1, max: 5, title: { display: true, text: 'ציון (1-5)' } } } }
     });
 
     // Correlation Scatter
