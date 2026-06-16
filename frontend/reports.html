@@ -171,10 +171,13 @@ API.updateReport = (id, d)  => API.put(`/reports/${id}`, d);
 
 /* ─── init ─── */
 async function init() {
-  const [weeks, reports] = await Promise.all([API.weeks(), API.reports()]);
+  const [weeks, reports] = await Promise.all([API.analysisWeeks(), API.reports()]);
   const sel = document.getElementById('weekSelect');
   sel.innerHTML = '<option value="">בחר שבוע לדוח חדש...</option>';
-  weeks.forEach(w => sel.appendChild(new Option(`שבוע ${w.week_number} (${formatDate(w.week_date)})`, w.week_date)));
+  weeks.forEach(w => {
+    const label = `שבוע ${w.week_number || '?'} (${formatDate(w.week_date)}) — NPS ${w.nps_score ? Number(w.nps_score).toFixed(1) : 'N/A'}`;
+    sel.appendChild(new Option(label, w.week_date));
+  });
   renderList(reports);
 }
 

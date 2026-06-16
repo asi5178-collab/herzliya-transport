@@ -88,6 +88,16 @@ router.get('/history', (req, res) => {
   ).all());
 });
 
+// שבועות זמינים לדוחות — רק שבועות שיש להם ניתוח
+router.get('/weeks', (req, res) => {
+  const db = getDb();
+  res.json(db.prepare(
+    `SELECT week_date, week_number, nps_score, satisfaction_level
+     FROM weekly_analysis WHERE week_date IS NOT NULL
+     ORDER BY week_date DESC`
+  ).all());
+});
+
 // אופטימיזציה
 router.post('/optimize-route', requireRole('admin'), async (req, res) => {
   const { line_id } = req.body;
@@ -108,17 +118,37 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
   const { week_date } = req.body;
   if (!week_date) return res.status(400).json({ error: 'תאריך שבוע חובה' });
   const db = getDb();
-  const analysis = db.prepare('SELECT * FROM weekly_analysis WHERE week_date = ?').get(week_date);
-  const rup = db.prepare('SELECT ROUND(100.0*SUM(actual_riders)/SUM(registered_students),1) as avg_rup, SUM(actual_riders) as total, SUM(registered_students) as total_registered FROM weekly_ridership WHERE week_date = ?').get(week_date);
+  // חיפוש לפי week_date — אם לא נמצא, ננסה לפי week_number (פתרון אי-התאמת תאריכים)
+  let analysis = db.prepare('SELECT * FROM weekly_analysis WHERE week_date = ?').get(week_date);
+  if (!analysis) {
+    // אולי המשתמש העלה את ה-RUP עם תאריך שונה (יום ראשון/שני) — ננסה לפי שבוע
+    const numMatch = week_date.match(/(\d{1,4})-(\d{2})-(\d{2})/);
+    if (numMatch) {
+      analysis = db.prepare(
+        `SELECT * FROM weekly_analysis WHERE ABS(JULIANDAY(week_date) - JULIANDAY(?)) <= 6 ORDER BY ABS(JULIANDAY(week_date) - JULIANDAY(?)) LIMIT 1`
+      ).get(week_date, week_date);
+    }
+  }
+  if (!analysis) return res.status(404).json({ error: 'ניתוח לא קיים לשבוע זה' });
+
+  // RUP — מחפש לפי week_number ראשון (עמיד לאי-התאמת תאריכים), אחר כך לפי תאריך
+  const weekNum = analysis.week_number;
+  const rupQuery = weekNum
+    ? 'SELECT ROUND(100.0*SUM(actual_riders)/SUM(registered_students),1) as avg_rup, SUM(actual_riders) as total, SUM(registered_students) as total_registered FROM weekly_ridership WHERE week_number = ?'
+    : 'SELECT ROUND(100.0*SUM(actual_riders)/SUM(registered_students),1) as avg_rup, SUM(actual_riders) as total, SUM(registered_students) as total_registered FROM weekly_ridership WHERE week_date = ?';
+  const rup = db.prepare(rupQuery).get(weekNum || analysis.week_date);
+
+  const rupLinesQuery = weekNum
+    ? 'WHERE wr.week_number = ?'
+    : 'WHERE wr.week_date = ?';
   const rupLines = db.prepare(`
     SELECT wr.registered_students, wr.actual_riders, wr.rup_percent, wr.capacity,
            COALESCE(l.name, 'קו ' || wr.line_id) as line_name,
            COALESCE(l.code, '') as line_code
     FROM weekly_ridership wr
     LEFT JOIN lines l ON l.id = wr.line_id
-    WHERE wr.week_date = ?
-    ORDER BY l.code`).all(week_date);
-  if (!analysis) return res.status(404).json({ error: 'ניתוח לא קיים לשבוע זה' });
+    ${rupLinesQuery}
+    ORDER BY l.code`).all(weekNum || analysis.week_date);
 
   const openTasks = db.prepare(
     `SELECT * FROM tasks WHERE status != 'done'

@@ -78,6 +78,7 @@ const API = (() => {
     analyzeText: (d) => request('POST', '/analysis/whatsapp-text', d),
     getAnalysis: (date) => request('GET', `/analysis/week/${date}`),
     analysisHistory: () => request('GET', '/analysis/history'),
+    analysisWeeks: () => request('GET', '/analysis/weeks'),
     generateReport: (week_date) => request('POST', '/analysis/generate-report', { week_date }),
     optimizeRoute: (line_id) => request('POST', '/analysis/optimize-route', { line_id }),
 
