@@ -109,7 +109,15 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
   if (!week_date) return res.status(400).json({ error: 'תאריך שבוע חובה' });
   const db = getDb();
   const analysis = db.prepare('SELECT * FROM weekly_analysis WHERE week_date = ?').get(week_date);
-  const rup = db.prepare('SELECT ROUND(100.0*SUM(actual_riders)/SUM(registered_students),1) as avg_rup, SUM(actual_riders) as total FROM weekly_ridership WHERE week_date = ?').get(week_date);
+  const rup = db.prepare('SELECT ROUND(100.0*SUM(actual_riders)/SUM(registered_students),1) as avg_rup, SUM(actual_riders) as total, SUM(registered_students) as total_registered FROM weekly_ridership WHERE week_date = ?').get(week_date);
+  const rupLines = db.prepare(`
+    SELECT wr.registered_students, wr.actual_riders, wr.rup_percent, wr.capacity,
+           COALESCE(l.name, 'קו ' || wr.line_id) as line_name,
+           COALESCE(l.code, '') as line_code
+    FROM weekly_ridership wr
+    LEFT JOIN lines l ON l.id = wr.line_id
+    WHERE wr.week_date = ?
+    ORDER BY l.code`).all(week_date);
   if (!analysis) return res.status(404).json({ error: 'ניתוח לא קיים לשבוע זה' });
 
   const openTasks = db.prepare(
@@ -124,7 +132,8 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
   const report = buildHTMLReport({
     week_date, week_number: analysis.week_number,
     nps_score: analysis.nps_score, satisfaction_level: analysis.satisfaction_level,
-    avg_rup: rup?.avg_rup, total_riders: rup?.total,
+    avg_rup: rup?.avg_rup, total_riders: rup?.total, total_registered: rup?.total_registered,
+    rupLines: rupLines || [],
     summary: analysis.summary_hebrew,
     posThemes: JSON.parse(analysis.positive_themes || '[]'),
     negThemes: JSON.parse(analysis.negative_themes || '[]'),
@@ -212,14 +221,14 @@ function buildHTMLReport(d) {
     <div style="margin-top:14px;font-size:13px;background:rgba(255,255,255,0.18);display:inline-block;padding:5px 22px;border-radius:20px;">שבוע ${d.week_number || ''} &nbsp;|&nbsp; ${dateStr}</div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(${d.student ? 4 : 3},1fr);gap:16px;margin-bottom:24px;">
+  <div style="display:grid;grid-template-columns:repeat(${d.student ? 4 : 3},1fr);gap:16px;margin-bottom:${d.rupLines?.length ? 12 : 24}px;">
     <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #2563eb;">
-      <div style="font-size:30px;font-weight:800;color:#2563eb;">${d.nps_score ? Number(d.nps_score).toFixed(1) : 'N/A'}</div>
+      <div style="font-size:30px;font-weight:800;color:#2563eb;">${d.nps_score != null ? Number(d.nps_score).toFixed(1) : 'N/A'}</div>
       <div style="font-size:12px;color:#64748b;margin-top:4px;">NPS הורים (מתוך 5)</div>
     </div>
     <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid #16a34a;">
-      <div style="font-size:30px;font-weight:800;color:#16a34a;">${d.avg_rup ? d.avg_rup + '%' : 'N/A'}</div>
-      <div style="font-size:12px;color:#64748b;margin-top:4px;">שיעור ניצול (RUP)</div>
+      <div style="font-size:30px;font-weight:800;color:#16a34a;">${d.avg_rup != null ? d.avg_rup + '%' : 'N/A'}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">שיעור ניצול (RUP)<br><span style="font-size:11px;">${d.total_riders != null ? d.total_riders + ' / ' + (d.total_registered || '?') + ' נוסעים' : ''}</span></div>
     </div>
     <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;text-align:center;border-top:3px solid ${satColor};">
       <div style="font-size:30px;font-weight:800;color:${satColor};">${satLabel}</div>
@@ -234,6 +243,38 @@ function buildHTMLReport(d) {
       </div>`;
     })() : ''}
   </div>
+
+  ${d.rupLines?.length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:0;margin-bottom:24px;overflow:hidden;">
+    <div style="padding:10px 16px;background:#f0fdf4;border-bottom:1px solid #dcfce7;font-weight:700;font-size:13px;color:#15803d;">
+      <i>🚌</i> פירוט נסיעות לפי קו — שבוע ${d.week_number || ''}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#f8fafc;">
+          <th style="padding:8px 14px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;">קו</th>
+          <th style="padding:8px 14px;text-align:center;color:#475569;border-bottom:1px solid #e2e8f0;">רשומים</th>
+          <th style="padding:8px 14px;text-align:center;color:#475569;border-bottom:1px solid #e2e8f0;">נסעו בפועל</th>
+          <th style="padding:8px 14px;text-align:center;color:#475569;border-bottom:1px solid #e2e8f0;">RUP%</th>
+          <th style="padding:8px 14px;text-align:center;color:#475569;border-bottom:1px solid #e2e8f0;">קיבולת</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${d.rupLines.map((l, i) => {
+          const rup = l.rup_percent ?? (l.registered_students ? +(100 * l.actual_riders / l.registered_students).toFixed(1) : null);
+          const rupColor = rup == null ? '#94a3b8' : rup >= 70 ? '#16a34a' : rup >= 40 ? '#d97706' : '#dc2626';
+          return `<tr style="background:${i % 2 === 0 ? 'white' : '#f8fafc'};">
+            <td style="padding:8px 14px;font-weight:600;">${l.line_code ? `[${l.line_code}] ` : ''}${l.line_name}</td>
+            <td style="padding:8px 14px;text-align:center;color:#374151;">${l.registered_students ?? '-'}</td>
+            <td style="padding:8px 14px;text-align:center;color:#374151;">${l.actual_riders ?? '-'}</td>
+            <td style="padding:8px 14px;text-align:center;">
+              <span style="font-weight:700;color:${rupColor};">${rup != null ? rup + '%' : '-'}</span>
+            </td>
+            <td style="padding:8px 14px;text-align:center;color:#94a3b8;">${l.capacity ?? '-'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>` : d.avg_rup == null ? `<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 16px;margin-bottom:24px;font-size:12px;color:#854d0e;"><i>⚠️</i> נתוני RUP לא הוזנו לשבוע זה — ניתן להזין ב<a href="weekly.html" style="color:#854d0e;font-weight:600;">נסיעות שבועיות</a></div>` : ''}
 
   ${d.summary ? `<div style="background:#f8fafc;border-right:4px solid #2563eb;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:24px;font-size:14px;line-height:1.85;color:#334155;">${d.summary}</div>` : ''}
 
