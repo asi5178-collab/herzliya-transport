@@ -209,6 +209,100 @@ async function optimizeRoute(lineData, studentLocations) {
   return response.content[0].text;
 }
 
+async function optimizeRouteAdvanced({ line, waypoints, rupData, parentMessages, parentAnalysis, studentAnalysis }) {
+  const anthropic = getClient();
+
+  const avgRup = rupData.length
+    ? (rupData.reduce((s, r) => s + (r.rup_percent || 0), 0) / rupData.length).toFixed(1)
+    : null;
+
+  const stopsText = waypoints.length
+    ? waypoints.sort((a, b) => a.order - b.order).map((w, i) => `${i + 1}. ${w.label}`).join('\n')
+    : 'לא הוגדרו תחנות';
+
+  const negParent = [...new Set(parentAnalysis.flatMap(a => a.negative_themes))].slice(0, 8);
+  const posParent = [...new Set(parentAnalysis.flatMap(a => a.positive_themes))].slice(0, 6);
+  const stuInsights = [...new Set(studentAnalysis.flatMap(a => [...a.student_insights, ...a.negative_themes]))].slice(0, 8);
+  const avgNps = parentAnalysis.length
+    ? (parentAnalysis.reduce((s, a) => s + (a.nps_score || 0), 0) / parentAnalysis.length).toFixed(1)
+    : 'N/A';
+  const avgStu = studentAnalysis.length
+    ? (studentAnalysis.reduce((s, a) => s + (a.satisfaction_score || 0), 0) / studentAnalysis.length).toFixed(1)
+    : 'N/A';
+
+  const msgSample = parentMessages.slice(0, 15)
+    .map(m => `• ${(m.message_text || '').substring(0, 180)}`).join('\n');
+
+  const rupRows = rupData.map(r =>
+    `שבוע ${r.week_number || r.week_date}: ${r.actual_riders}/${r.registered_students} נוסעים (${r.rup_percent}%)`
+  ).join('\n');
+
+  const prompt = `אתה מומחה אופטימיזציה תחבורה עירונית לעיריית הרצליה.
+נתח את הקו הבא ותן המלצות מפורטות לשיפור, בהתבסס על כל הנתונים:
+
+== פרטי הקו ==
+שם: ${line.name} | קוד: ${line.code} | קיבולת: ${line.capacity} | סוג: ${line.vehicle_type || 'מיניבוס'}
+תיאור: ${line.description || 'לא צוין'}
+
+== תחנות עצירה נוכחיות ==
+${stopsText}
+
+== נתוני ניצול (RUP) — 30 ימים אחרונים ==
+${rupRows || 'אין נתונים'}
+ממוצע RUP: ${avgRup !== null ? avgRup + '%' : 'N/A'}
+
+== ניתוח שביעות רצון ==
+NPS הורים (ממוצע): ${avgNps}/5
+שביעות תלמידים (ממוצע): ${avgStu}/5
+
+== נושאים שליליים מהורים ==
+${negParent.join('\n') || 'לא דווח'}
+
+== נושאים חיוביים מהורים ==
+${posParent.join('\n') || 'לא דווח'}
+
+== תובנות מתלמידים ==
+${stuInsights.join('\n') || 'לא דווח'}
+
+== הודעות נבחרות מקבוצות WhatsApp ==
+${msgSample || 'אין הודעות'}
+
+החזר JSON בלבד, בפורמט הבא:
+{
+  "executive_summary": "סיכום מנהלים 2-3 משפטים על מצב הקו",
+  "rup_analysis": "ניתוח שיעור הניצול: מה המשמעות, מה המגמה",
+  "feedback_insights": "מה עולה מהפידבק המשולב של הורים ותלמידים לגבי קו זה",
+  "stop_recommendations": [
+    {"action": "הוסף/הזז/הסר/שמור", "stop_name": "שם תחנה", "reason": "סיבה מבוססת נתונים", "priority": "high/medium/low"}
+  ],
+  "schedule_recommendations": ["המלצה לשינוי לוח זמנים 1", "המלצה 2"],
+  "capacity_recommendations": ["המלצה לגבי קיבולת/צי"],
+  "action_items": [
+    {"title": "משימה", "responsible": "גורם אחראי", "timeline": "תוך X שבועות", "priority": "high/medium/low"}
+  ],
+  "kpis": [
+    {"metric": "שם מדד", "current": "ערך נוכחי", "target": "יעד", "gap": "פער"}
+  ]
+}`;
+
+  const response = await anthropic.messages.create({
+    model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+    max_tokens: 2500,
+    messages: [{ role: 'user', content: prompt }]
+  });
+
+  const raw = response.content[0].text.trim();
+  const parsed = safeParseClaudeJSON(raw, 0);
+  parsed.line_name = line.name;
+  parsed.line_code = line.code;
+  parsed.avg_rup = avgRup;
+  parsed.avg_nps = avgNps;
+  parsed.avg_stu = avgStu;
+  parsed.stops = waypoints.sort((a, b) => a.order - b.order).map(w => w.label);
+  parsed.generated_at = new Date().toISOString();
+  return parsed;
+}
+
 // =====================================================================
 // ניתוח טקסט WhatsApp קבוצות תלמידים
 // =====================================================================
@@ -281,4 +375,4 @@ ${text}
   return result;
 }
 
-module.exports = { analyzeRawText, analyzeStudentText, generateWeeklyReport, optimizeRoute };
+module.exports = { analyzeRawText, analyzeStudentText, generateWeeklyReport, optimizeRoute, optimizeRouteAdvanced };

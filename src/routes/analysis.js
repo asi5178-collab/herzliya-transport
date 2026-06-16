@@ -98,18 +98,54 @@ router.get('/weeks', (req, res) => {
   ).all());
 });
 
-// אופטימיזציה
+// אופטימיזציה מתקדמת — כולל WhatsApp + RUP + תחנות
 router.post('/optimize-route', requireRole('admin'), async (req, res) => {
   const { line_id } = req.body;
   if (!line_id) return res.status(400).json({ error: 'נדרש מזהה קו' });
   const db = getDb();
   const line = db.prepare('SELECT * FROM lines WHERE id = ?').get(line_id);
   if (!line) return res.status(404).json({ error: 'קו לא נמצא' });
-  const students = db.prepare('SELECT name, address, latitude, longitude FROM students WHERE line_id = ? AND is_active = 1').all(line_id);
+
+  // RUP לפי קו — חודש אחרון
+  const rupData = db.prepare(`
+    SELECT week_date, week_number, actual_riders, registered_students, rup_percent, capacity
+    FROM weekly_ridership WHERE line_id = ? AND week_date >= DATE('now','-35 days')
+    ORDER BY week_date DESC`).all(line_id);
+
+  // הודעות WhatsApp הורים מהחודש האחרון — לפי קו או קבוצת הורים של הקו
+  const parentMessages = db.prepare(`
+    SELECT message_text, week_date FROM whatsapp_messages
+    WHERE (line_id = ? OR parent_group_id IN (SELECT id FROM parent_groups WHERE line_id = ?))
+    AND week_date >= DATE('now','-35 days')
+    ORDER BY week_date DESC LIMIT 60`).all(line_id, line_id);
+
+  // ניתוחי הורים מהחודש האחרון (כלל-ארגוני)
+  const parentAnalysis = db.prepare(`
+    SELECT week_date, week_number, nps_score, summary_hebrew, positive_themes, negative_themes, recommendations
+    FROM weekly_analysis WHERE week_date >= DATE('now','-35 days') ORDER BY week_date DESC`).all()
+    .map(a => ({ ...a,
+      positive_themes: JSON.parse(a.positive_themes || '[]'),
+      negative_themes: JSON.parse(a.negative_themes || '[]'),
+      recommendations: JSON.parse(a.recommendations || '[]')
+    }));
+
+  // ניתוחי תלמידים מהחודש האחרון
+  const studentAnalysis = db.prepare(`
+    SELECT week_date, week_number, satisfaction_score, summary_hebrew, student_insights, positive_themes, negative_themes
+    FROM student_analysis WHERE week_date >= DATE('now','-35 days') ORDER BY week_date DESC`).all()
+    .map(a => ({ ...a,
+      student_insights: JSON.parse(a.student_insights || '[]'),
+      positive_themes: JSON.parse(a.positive_themes || '[]'),
+      negative_themes: JSON.parse(a.negative_themes || '[]')
+    }));
+
   try {
-    const { optimizeRoute: opt } = require('../services/claudeService');
-    const result = await opt({ ...line, waypoints: JSON.parse(line.waypoints || '[]') }, students);
-    res.json({ success: true, recommendations: result });
+    const { optimizeRouteAdvanced } = require('../services/claudeService');
+    const result = await optimizeRouteAdvanced({
+      line, waypoints: JSON.parse(line.waypoints || '[]'),
+      rupData, parentMessages, parentAnalysis, studentAnalysis
+    });
+    res.json({ success: true, result });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
