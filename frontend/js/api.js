@@ -68,6 +68,7 @@ const API = (() => {
     line: (id) => request('GET', `/lines/${id}`),
     updateLine: (id, d) => request('PUT', `/lines/${id}`, d),
     createLine: (d) => request('POST', '/lines', d),
+    toggleLineAI: (id) => request('PATCH', `/lines/${id}/ai-toggle`, {}),
 
     // Weekly
     ridership: (params = {}) => { const qs = new URLSearchParams(params).toString(); return request('GET', `/weekly/ridership${qs ? '?' + qs : ''}`); },
@@ -80,6 +81,7 @@ const API = (() => {
     analysisHistory: () => request('GET', '/analysis/history'),
     analysisWeeks: () => request('GET', '/analysis/weeks'),
     generateReport: (week_date) => request('POST', '/analysis/generate-report', { week_date }),
+    generateDailyReport: (report_date, text, line_id) => request('POST', '/analysis/daily-report', { report_date, text, line_id }),
     optimizeRoute: (line_id) => request('POST', '/analysis/optimize-route', { line_id }),
 
     // Import

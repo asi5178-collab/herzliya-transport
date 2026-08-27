@@ -395,6 +395,89 @@ function buildHTMLReport(d) {
 </div>`;
 }
 
+// =====================================================================
+// דוח יומי — ניתוח WhatsApp ליום ספציפי
+// =====================================================================
+router.post('/daily-report', requireRole('admin'), async (req, res) => {
+  const { report_date, text, line_id } = req.body;
+  if (!report_date) return res.status(400).json({ error: 'יש לבחור תאריך' });
+  if (!text || text.trim().length < 10) return res.status(400).json({ error: 'יש להדביק טקסט הודעות' });
+
+  const db = getDb();
+  const lineInfo = line_id ? db.prepare('SELECT name, code FROM lines WHERE id = ?').get(line_id) : null;
+
+  try {
+    const { analyzeRawText } = require('../services/claudeService');
+    const result = await analyzeRawText(text.trim(), report_date, null, {
+      report_type: 'daily',
+      line_name: lineInfo ? lineInfo.name : null
+    });
+
+    // שמור הודעה לארכיב
+    db.prepare(`INSERT INTO whatsapp_messages (week_date, line_id, sender_name, message_text) VALUES (?,?,?,?)`)
+      .run(report_date, line_id || null, 'דוח יומי', text.trim().substring(0, 5000));
+
+    // בנה HTML לדוח יומי
+    const dateLabel = new Date(report_date).toLocaleDateString('he-IL');
+    const lineName = lineInfo ? ` — ${lineInfo.name}` : '';
+    const satMap = { excellent: ['מצוין','#16a34a'], good: ['טוב','#2563eb'], developing: ['בפיתוח','#d97706'], critical: ['קריטי','#dc2626'] };
+    const [satLabel, satColor] = satMap[result.satisfaction_level] || ['לא ידוע','#64748b'];
+    const li = s => `<li style="padding:4px 0;color:#374151;">${s}</li>`;
+
+    const report = `<div style="font-family:'Segoe UI','Arial Hebrew',Arial,sans-serif;direction:rtl;color:#1e293b;max-width:760px;">
+  <div style="background:linear-gradient(135deg,#0f766e 0%,#0891b2 100%);color:white;padding:22px 28px;border-radius:10px;margin-bottom:20px;text-align:center;">
+    <div style="font-size:11px;letter-spacing:3px;opacity:0.75;margin-bottom:6px;">עיריית הרצליה</div>
+    <div style="font-size:22px;font-weight:800;">דוח יומי${lineName}</div>
+    <div style="margin-top:10px;font-size:13px;background:rgba(255,255,255,0.2);display:inline-block;padding:4px 18px;border-radius:20px;">${dateLabel}</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center;border-top:3px solid #2563eb;">
+      <div style="font-size:26px;font-weight:800;color:#2563eb;">${result.nps_score != null ? Number(result.nps_score).toFixed(1) : 'N/A'}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">NPS יומי (מתוך 5)</div>
+    </div>
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center;border-top:3px solid ${satColor};">
+      <div style="font-size:26px;font-weight:800;color:${satColor};">${satLabel}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">רמת שביעות</div>
+    </div>
+  </div>
+
+  ${result.summary ? `<div style="background:#f0fdfa;border-right:4px solid #0891b2;padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:20px;font-size:13px;line-height:1.85;color:#334155;">${result.summary}</div>` : ''}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+    ${(result.positive_themes||[]).length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-weight:700;color:#16a34a;margin-bottom:10px;font-size:13px;">חוזקות היום</div>
+      <ul style="margin:0;padding-right:16px;font-size:12px;">${(result.positive_themes||[]).map(li).join('')}</ul>
+    </div>` : ''}
+    ${(result.negative_themes||[]).length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
+      <div style="font-weight:700;color:#dc2626;margin-bottom:10px;font-size:13px;">בעיות היום</div>
+      <ul style="margin:0;padding-right:16px;font-size:12px;">${(result.negative_themes||[]).map(li).join('')}</ul>
+    </div>` : ''}
+  </div>
+
+  ${(result.recommendations||[]).length ? `<div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:20px;">
+    <div style="font-weight:700;color:#7c3aed;margin-bottom:10px;font-size:13px;">המלצות לטיפול מיידי</div>
+    <ul style="margin:0;padding-right:16px;font-size:12px;">${(result.recommendations||[]).map(li).join('')}</ul>
+  </div>` : ''}
+
+  <div style="text-align:center;padding:12px;color:#94a3b8;font-size:11px;border-top:1px solid #f1f5f9;">
+    עיריית הרצליה &nbsp;|&nbsp; דוח יומי &nbsp;|&nbsp; ${dateLabel}
+  </div>
+</div>`;
+
+    const title = `דוח יומי ${dateLabel}${lineName}`;
+    db.prepare('INSERT INTO reports (week_date, title, content_hebrew, created_by) VALUES (?,?,?,?)').run(
+      report_date, title, report, req.user.id);
+
+    res.json({ success: true, report, result });
+  } catch (err) {
+    if (err.message.includes('ANTHROPIC_API_KEY')) {
+      return res.status(503).json({ error: 'מפתח API של Claude לא מוגדר ב-.env' });
+    }
+    res.status(500).json({ error: `שגיאת ניתוח: ${err.message}` });
+  }
+});
+
 // עדכון ניתוח ידני
 router.put('/week/:date', requireRole('admin'), (req, res) => {
   try {

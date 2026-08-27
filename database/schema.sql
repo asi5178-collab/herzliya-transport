@@ -40,13 +40,17 @@ CREATE TABLE IF NOT EXISTS zones (
 CREATE TABLE IF NOT EXISTS lines (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  code TEXT UNIQUE NOT NULL,   -- 1A, 1B, 1C
+  code TEXT UNIQUE NOT NULL,   -- 1A, 1B, SKIP1, M1 ...
   description TEXT,
   capacity INTEGER DEFAULT 18,
-  vehicle_type TEXT DEFAULT 'minibus',  -- minibus | bus
+  vehicle_type TEXT DEFAULT 'minibus',  -- minibus | bus | skipper
   waypoints TEXT,              -- JSON: [{lat, lng, label, order}]
   zone_ids TEXT,               -- JSON array of zone IDs
   status TEXT DEFAULT 'active', -- active | planned | suspended
+  ai_enabled INTEGER DEFAULT 1,  -- 1=AI analysis on, 0=control group (for research)
+  route_type TEXT DEFAULT 'regular',  -- regular | skipper | mahalakim
+  school_from TEXT,            -- origin school (מהלכים)
+  school_to TEXT,              -- destination school (מהלכים)
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

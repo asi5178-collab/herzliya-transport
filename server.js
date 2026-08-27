@@ -19,6 +19,10 @@ try {
     "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'שיפור'",
     "ALTER TABLE tasks ADD COLUMN stakeholder TEXT DEFAULT 'מנהל הסעות'",
     "ALTER TABLE tasks ADD COLUMN week_number INTEGER",
+    "ALTER TABLE lines ADD COLUMN ai_enabled INTEGER DEFAULT 1",
+    "ALTER TABLE lines ADD COLUMN route_type TEXT DEFAULT 'regular'",
+    "ALTER TABLE lines ADD COLUMN school_from TEXT",
+    "ALTER TABLE lines ADD COLUMN school_to TEXT",
     `CREATE TABLE IF NOT EXISTS student_analysis (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       week_date DATE NOT NULL,
@@ -77,6 +81,7 @@ app.use('/api/users', require('./src/routes/users'));
 app.use('/api/reports', require('./src/routes/reports'));
 app.use('/api/student-analysis', require('./src/routes/student-analysis'));
 app.use('/api/backup', require('./src/routes/backup'));
+app.use('/api/v1', require('./src/routes/api-v1'));
 
 // Health check
 app.get('/api/health', (req, res) => {

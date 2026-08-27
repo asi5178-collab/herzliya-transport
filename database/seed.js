@@ -68,10 +68,36 @@ function doSeed(db) {
       { order: 2, lat: 32.170, lng: 34.820, label: "תחנת הרצליה ב'",   time: '07:20' },
       { order: 3, lat: 32.162, lng: 34.805, label: 'תיכון עירוני',      time: '07:35' }
     ]);
-    const insertLine = db.prepare(`INSERT OR IGNORE INTO lines (name, code, description, capacity, vehicle_type, waypoints, zone_ids, status) VALUES (?,?,?,?,?,?,?,?)`);
-    insertLine.run('קו 1א', '1A', 'קו ראשי - מרינה ונוף ים',    18, 'minibus', wp1A, JSON.stringify([1,2]), 'active');
-    insertLine.run('קו 1ב', '1B', 'קו משני - הרצליה פיתוח',      18, 'minibus', wp1B, JSON.stringify([3,4]), 'active');
-    insertLine.run('קו 1ג', '1C', 'קו מתוכנן - אזור תעשייה',     50, 'bus',     JSON.stringify([]), JSON.stringify([5]), 'planned');
+    const insertLine = db.prepare(`INSERT OR IGNORE INTO lines (name, code, description, capacity, vehicle_type, waypoints, zone_ids, status, ai_enabled, route_type, school_from, school_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+    // קווים קיימים
+    insertLine.run('קו 1א', '1A', 'קו ראשי - מרינה ונוף ים',    18, 'minibus', wp1A, JSON.stringify([1,2]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1ב', '1B', 'קו משני - הרצליה פיתוח',      18, 'minibus', wp1B, JSON.stringify([3,4]), 'active', 0, 'regular', null, null);
+    insertLine.run('קו 1ג', '1C', 'קו מתוכנן - אזור תעשייה',     50, 'bus',     JSON.stringify([]), JSON.stringify([5]), 'planned', 1, 'regular', null, null);
+
+    // קווי סקיפר 1-10 (רשת תשפ"ז)
+    const skipWp = JSON.stringify([]);
+    insertLine.run('סקיפר 1',  'SKIP1',  'קו סקיפר 1 – גורדון/רעות → חט"ב רעות',          18, 'skipper', skipWp, JSON.stringify([]), 'active',  1, 'skipper', 'גורדון', 'רעות');
+    insertLine.run('סקיפר 2',  'SKIP2',  'קו סקיפר 2 – הרצליה פיתוח → חט"ב יד גיורא',    18, 'skipper', skipWp, JSON.stringify([]), 'active',  1, 'skipper', null, 'יד גיורא');
+    insertLine.run('סקיפר 3',  'SKIP3',  'קו סקיפר 3 – שכונת השרון → חט"ב בן גוריון',     18, 'skipper', skipWp, JSON.stringify([]), 'active',  0, 'skipper', null, 'בן גוריון');
+    insertLine.run('סקיפר 4',  'SKIP4',  'קו סקיפר 4 – גליל ים → קריית החינוך',           18, 'skipper', skipWp, JSON.stringify([]), 'active',  1, 'skipper', null, 'גליל ים');
+    insertLine.run('סקיפר 5',  'SKIP5',  'קו סקיפר 5 – הרצליה ב׳ → חט"ב יד גיורא',       18, 'skipper', skipWp, JSON.stringify([]), 'active',  0, 'skipper', null, 'יד גיורא');
+    insertLine.run('סקיפר 6',  'SKIP6',  'קו סקיפר 6 – נוף ים → חט"ב יד גיורא',           18, 'skipper', skipWp, JSON.stringify([]), 'active',  1, 'skipper', 'נוף ים', 'יד גיורא');
+    insertLine.run('סקיפר 7',  'SKIP7',  'קו סקיפר 7 – הרצליה מרכז → חט"ב אלתרמן',       18, 'skipper', skipWp, JSON.stringify([]), 'active',  1, 'skipper', null, 'אלתרמן');
+    insertLine.run('סקיפר 8',  'SKIP8',  'קו סקיפר 8 – ברנדייס → חט"ב יד גיורא',          18, 'skipper', skipWp, JSON.stringify([]), 'active',  0, 'skipper', 'ברנדייס', 'יד גיורא');
+    insertLine.run('סקיפר 9',  'SKIP9',  'קו סקיפר 9 – אלון → חט"ב אלתרמן',               18, 'skipper', skipWp, JSON.stringify([]), 'active',  1, 'skipper', 'אלון', 'אלתרמן');
+    insertLine.run('סקיפר 10', 'SKIP10', 'קו סקיפר 10 – מרכז עיר → תיכון חדש',           18, 'skipper', skipWp, JSON.stringify([]), 'active',  0, 'skipper', null, 'תיכון חדש');
+
+    // 8 מהלכים תשפ"ז
+    insertLine.run('מהלך 1 – ברנדייס → יד גיורא',      'M1',  'מעבר בוגרי יסודי ברנדייס לחט"ב יד גיורא (היה: סמדר)',  50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'ברנדייס', 'יד גיורא');
+    insertLine.run('מהלך 2 – נוף ים → יד גיורא',       'M2',  'מעבר בוגרי יסודי נוף ים לחט"ב יד גיורא (היה: סמדר)',   50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'נוף ים', 'יד גיורא');
+    insertLine.run('מהלך 3 – ב"ס דמוקרטי → סמדר',     'M3',  'מעבר ב"ס הדמוקרטי לקמפוס סמדר (עתידי תשפ"ח)',          50, 'bus', skipWp, JSON.stringify([]), 'planned', 1, 'mahalakim', 'ב"ס הדמוקרטי', 'סמדר');
+    insertLine.run('מהלך 4א – ברנר → בן גוריון',       'M4A', 'הזנת יסודי ברנר לחט"ב בן גוריון',                       50, 'bus', skipWp, JSON.stringify([]), 'active',  0, 'mahalakim', 'ברנר', 'בן גוריון');
+    insertLine.run('מהלך 4ב – שז"ר → יד גיורא',        'M4B', 'הזנת יסודי שז"ר לחט"ב יד גיורא',                        50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'שז"ר', 'יד גיורא');
+    insertLine.run('מהלך 5א – גורדון → בן גוריון',     'M5A', 'הזנת 70% תלמידי גורדון לחט"ב בן גוריון',               50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'גורדון', 'בן גוריון');
+    insertLine.run('מהלך 5ב – גורדון → רעות',          'M5B', 'הזנת 30% תלמידי גורדון לחט"ב רעות (סקיפר 1)',           18, 'skipper', skipWp, JSON.stringify([]), 'active', 0, 'mahalakim', 'גורדון', 'רעות');
+    insertLine.run('מהלך 6 – אלון → אלתרמן',           'M6',  'הזנת יסודי אלון לחט"ב אלתרמן (היה: בן גוריון)',         50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'אלון', 'אלתרמן');
+    insertLine.run('מהלך 7 – הנדיב/אלתרמן → מבנה קבע','M7',  'מעבר אלתרמן והנדיב למבנה הקבע תשפ"ז',                  50, 'bus', skipWp, JSON.stringify([]), 'active',  0, 'mahalakim', 'הנדיב', 'אלתרמן');
+    insertLine.run('מהלך 8 – גליל ים → קריית החינוך',  'M8',  'הקמת חט"ב ותיכון בקריית החינוך גליל ים (406)',           50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'גליל ים', 'גליל ים');
 
     // Parent groups
     const insertGroup = db.prepare(`INSERT OR IGNORE INTO parent_groups (name, line_id, member_count) VALUES (?,?,?)`);

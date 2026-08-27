@@ -34,63 +34,133 @@
       <div style="font-size:15px;font-weight:600;"><i class="bi bi-signpost-2" style="color:#7c3aed;"></i> ניהול קווי הסעה</div>
     </div>
     <div id="page-content">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;" id="linesGrid"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;" id="linesGrid"></div>
     </div>
   </div>
 </div>
 <script src="js/api.js"></script>
 <script>
 if (!Auth.requireAuth()) {}
-const lineColors = {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6'};
+const isAdmin = Auth.hasRole('admin');
+
+const routeTypeColors = {
+  regular: '#3b82f6',
+  skipper: '#7c3aed',
+  mahalakim: '#0891b2'
+};
+const routeTypeLabels = {
+  regular: 'רגיל',
+  skipper: 'סקיפר',
+  mahalakim: 'מהלך תשפ"ז'
+};
+
+function lineColor(l) {
+  return routeTypeColors[l.route_type] || '#64748b';
+}
+
+async function toggleAI(id, btn) {
+  try {
+    btn.disabled = true;
+    const res = await API.toggleLineAI(id);
+    btn.textContent = res.ai_enabled ? '🤖 AI פעיל' : '⚪ AI כבוי';
+    btn.style.background = res.ai_enabled ? '#d1fae5' : '#fee2e2';
+    btn.style.color = res.ai_enabled ? '#065f46' : '#991b1b';
+    toast(res.ai_enabled ? 'ניתוח AI הופעל לקו זה' : 'ניתוח AI כובה לקו זה (קבוצת ביקורת)', res.ai_enabled ? 'success' : 'warning');
+  } catch(e) {
+    toast('שגיאה בעדכון הגדרת AI', 'danger');
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 async function loadLines() {
   const lines = await API.lines();
-  document.getElementById('linesGrid').innerHTML = lines.map(l => {
-    const color = lineColors[l.code]||'#64748b';
-    const statusBadge = l.status==='active'?'<span style="background:#f0fdf4;color:#16a34a;padding:2px 8px;border-radius:10px;font-size:11px;">פעיל</span>':l.status==='planned'?'<span style="background:#fffbeb;color:#d97706;padding:2px 8px;border-radius:10px;font-size:11px;">מתוכנן</span>':'<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:10px;font-size:11px;">מושהה</span>';
-    const waypoints = l.waypoints||[];
-    return `
-      <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
-        <div style="background:${color};padding:20px;color:white;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="font-size:22px;font-weight:800;">${l.name}</div>
-            ${statusBadge}
-          </div>
-          <div style="font-size:13px;opacity:0.85;margin-top:4px;">${l.description||''}</div>
+
+  // Group by route_type
+  const groups = {
+    regular: lines.filter(l => !l.route_type || l.route_type === 'regular'),
+    skipper: lines.filter(l => l.route_type === 'skipper'),
+    mahalakim: lines.filter(l => l.route_type === 'mahalakim')
+  };
+
+  let html = '';
+  for (const [type, group] of Object.entries(groups)) {
+    if (!group.length) continue;
+    const label = routeTypeLabels[type];
+    const color = routeTypeColors[type];
+    html += `<div style="grid-column:1/-1;padding:8px 0 4px;font-size:13px;font-weight:700;color:${color};border-bottom:2px solid ${color}33;margin-bottom:4px;">${label} (${group.length} קווים)</div>`;
+    html += group.map(l => renderLineCard(l)).join('');
+  }
+
+  document.getElementById('linesGrid').innerHTML = html;
+}
+
+function renderLineCard(l) {
+  const color = lineColor(l);
+  const statusBadge = l.status==='active'
+    ? '<span style="background:rgba(255,255,255,0.25);color:white;padding:2px 8px;border-radius:10px;font-size:11px;">פעיל</span>'
+    : l.status==='planned'
+    ? '<span style="background:rgba(255,200,0,0.35);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">מתוכנן</span>'
+    : '<span style="background:rgba(0,0,0,0.2);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">מושהה</span>';
+  const waypoints = l.waypoints||[];
+  const aiEnabled = l.ai_enabled !== 0;
+  const aiBadge = aiEnabled
+    ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:11px;">🤖 AI</span>`
+    : `<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:11px;">⚪ ביקורת</span>`;
+  const schoolRoute = (l.school_from || l.school_to)
+    ? `<div style="font-size:11px;margin-top:4px;opacity:0.9;">${l.school_from||'?'} → ${l.school_to||'?'}</div>`
+    : '';
+
+  return `
+    <div style="background:white;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+      <div style="background:${color};padding:16px 20px;color:white;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="font-size:18px;font-weight:800;line-height:1.2;">${l.name}</div>
+          <div style="display:flex;gap:4px;flex-shrink:0;">${statusBadge}</div>
         </div>
-        <div style="padding:16px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-            <div style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">
-              <div style="font-size:24px;font-weight:700;color:${color};">${l.student_count||0}</div>
-              <div style="font-size:11px;color:#94a3b8;">תלמידים</div>
-            </div>
-            <div style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">
-              <div style="font-size:24px;font-weight:700;color:${color};">${l.capacity}</div>
-              <div style="font-size:11px;color:#94a3b8;">קיבולת ${l.vehicle_type==='bus'?'(אוטובוס)':'(מיניבוס)'}</div>
+        ${schoolRoute}
+        <div style="font-size:12px;opacity:0.8;margin-top:4px;">${l.description||''}</div>
+      </div>
+      <div style="padding:14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
+          <div style="text-align:center;padding:8px;background:#f8fafc;border-radius:8px;">
+            <div style="font-size:20px;font-weight:700;color:${color};">${l.student_count||0}</div>
+            <div style="font-size:10px;color:#94a3b8;">תלמידים</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:#f8fafc;border-radius:8px;">
+            <div style="font-size:20px;font-weight:700;color:${color};">${l.capacity}</div>
+            <div style="font-size:10px;color:#94a3b8;">קיבולת</div>
+          </div>
+          <div style="text-align:center;padding:8px;background:#f8fafc;border-radius:8px;">
+            <div style="font-size:13px;font-weight:700;">${aiBadge}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:2px;">מחקר</div>
+          </div>
+        </div>
+        ${waypoints.length?`
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;font-weight:600;color:#64748b;margin-bottom:5px;">תחנות:</div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              ${waypoints.sort((a,b)=>a.order-b.order).map((w,i)=>`
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;">
+                  <div style="width:18px;height:18px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;">${i+1}</div>
+                  <span>${w.label}</span>
+                  ${w.time?`<span style="color:#94a3b8;margin-right:auto;">${w.time}</span>`:''}
+                </div>
+              `).join('<div style="width:1px;height:6px;background:#e2e8f0;margin-right:9px;"></div>')}
             </div>
           </div>
-          ${waypoints.length?`
-            <div style="margin-bottom:12px;">
-              <div style="font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;">תחנות:</div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                ${waypoints.sort((a,b)=>a.order-b.order).map((w,i)=>`
-                  <div style="display:flex;align-items:center;gap:8px;font-size:12px;">
-                    <div style="width:20px;height:20px;border-radius:50%;background:${color};color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${i+1}</div>
-                    <span>${w.label}</span>
-                    ${w.time?`<span style="color:#94a3b8;margin-right:auto;">${w.time}</span>`:''}
-                  </div>
-                `).join('<div style="width:1px;height:8px;background:#e2e8f0;margin-right:10px;"></div>')}
-              </div>
-            </div>
-          `:'<div style="color:#94a3b8;font-size:12px;text-align:center;padding:12px;">אין תחנות מוגדרות</div>'}
-          <div style="display:flex;gap:6px;">
-            <a href="optimization.html" class="btn btn-outline btn-sm" style="flex:1;justify-content:center;"><i class="bi bi-map"></i> הצג במפה</a>
-            <a href="weekly.html" class="btn btn-outline btn-sm" style="flex:1;justify-content:center;"><i class="bi bi-graph-up"></i> נתוני RUP</a>
-          </div>
+        `:'<div style="color:#94a3b8;font-size:11px;text-align:center;padding:8px 0;">אין תחנות מוגדרות</div>'}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <a href="optimization.html" class="btn btn-outline btn-sm" style="flex:1;justify-content:center;min-width:80px;"><i class="bi bi-map"></i> מפה</a>
+          <a href="weekly.html" class="btn btn-outline btn-sm" style="flex:1;justify-content:center;min-width:80px;"><i class="bi bi-graph-up"></i> RUP</a>
+          ${isAdmin?`<button onclick="toggleAI(${l.id}, this)" class="btn btn-sm"
+            style="flex:1;justify-content:center;min-width:80px;border:1px solid #e2e8f0;background:${aiEnabled?'#d1fae5':'#fee2e2'};color:${aiEnabled?'#065f46':'#991b1b'};">
+            ${aiEnabled?'🤖 AI פעיל':'⚪ AI כבוי'}
+          </button>`:''}
         </div>
       </div>
-    `;
-  }).join('');
+    </div>
+  `;
 }
 loadLines();
 </script>

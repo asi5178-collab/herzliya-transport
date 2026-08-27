@@ -138,6 +138,23 @@
               </div>
             </div>
 
+            <!-- Report type toggle -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+              <button id="modeWeekly" onclick="setReportMode('weekly')"
+                style="flex:1;padding:7px;border:2px solid #7c3aed;border-radius:8px;background:#7c3aed;color:white;cursor:pointer;font-size:12px;font-weight:600;">
+                <i class="bi bi-calendar-week"></i> דוח שבועי
+              </button>
+              <button id="modeDaily" onclick="setReportMode('daily')"
+                style="flex:1;padding:7px;border:2px solid #e2e8f0;border-radius:8px;background:white;color:#64748b;cursor:pointer;font-size:12px;font-weight:600;">
+                <i class="bi bi-calendar-day"></i> דוח יומי
+              </button>
+            </div>
+            <!-- Daily date (shown in daily mode) -->
+            <div id="dailyDateRow" style="display:none;margin-bottom:10px;">
+              <label class="form-label">תאריך הדוח</label>
+              <input type="date" id="dailyDate" class="form-control">
+            </div>
+
             <div id="analyzeAlert" style="display:none;" class="alert"></div>
             <button onclick="runAnalysis()" id="analyzeBtn" class="btn btn-primary" style="width:100%;">
               <i class="bi bi-robot"></i> הפעל ניתוח Claude AI
@@ -388,13 +405,31 @@ function detectDateFromText(text) {
 
 loadHistory();
 
+let currentReportMode = 'weekly';
+
+function setReportMode(mode) {
+  currentReportMode = mode;
+  const weekFields = document.querySelectorAll('#weekDate,#weekNumber');
+  const dailyRow = document.getElementById('dailyDateRow');
+  const btnWeekly = document.getElementById('modeWeekly');
+  const btnDaily = document.getElementById('modeDaily');
+
+  if (mode === 'daily') {
+    document.getElementById('dailyDate').value = document.getElementById('dailyDate').value || new Date().toISOString().slice(0,10);
+    dailyRow.style.display = '';
+    btnDaily.style.background = '#0891b2'; btnDaily.style.color = 'white'; btnDaily.style.borderColor = '#0891b2';
+    btnWeekly.style.background = 'white'; btnWeekly.style.color = '#64748b'; btnWeekly.style.borderColor = '#e2e8f0';
+  } else {
+    dailyRow.style.display = 'none';
+    btnWeekly.style.background = '#7c3aed'; btnWeekly.style.color = 'white'; btnWeekly.style.borderColor = '#7c3aed';
+    btnDaily.style.background = 'white'; btnDaily.style.color = '#64748b'; btnDaily.style.borderColor = '#e2e8f0';
+  }
+}
+
 async function runAnalysis() {
   const text = document.getElementById('whatsappText').value.trim();
-  const weekDate = document.getElementById('weekDate').value;
-  const weekNumber = document.getElementById('weekNumber').value;
   const lineId = document.getElementById('lineSelect').value;
 
-  if (!weekDate) { showAlert('יש לבחור תאריך שבוע', 'warning'); return; }
   if (!text || text.length < 10) { showAlert('יש להדביק טקסט (לפחות 10 תווים)', 'warning'); return; }
 
   const btn = document.getElementById('analyzeBtn');
@@ -403,15 +438,29 @@ async function runAnalysis() {
   showAlert('', '');
 
   try {
-    const result = await API.analyzeText({
-      text, week_date: weekDate,
-      week_number: weekNumber ? parseInt(weekNumber) : null,
-      line_id: lineId || null
-    });
-    currentWeekDate = weekDate;
-    displayResults(result.result, weekDate, weekNumber);
-    showAlert(`✅ ניתוח הושלם!`, 'success');
-    loadHistory();
+    if (currentReportMode === 'daily') {
+      const reportDate = document.getElementById('dailyDate').value;
+      if (!reportDate) { showAlert('יש לבחור תאריך', 'warning'); return; }
+      const result = await API.generateDailyReport(reportDate, text, lineId || null);
+      showAlert(`✅ דוח יומי נוצר!`, 'success');
+      // Open report in new tab
+      const win = window.open('', '_blank');
+      win.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>דוח יומי</title></head><body style="margin:0;padding:20px;font-family:Arial;">${result.report}</body></html>`);
+      win.document.close();
+    } else {
+      const weekDate = document.getElementById('weekDate').value;
+      const weekNumber = document.getElementById('weekNumber').value;
+      if (!weekDate) { showAlert('יש לבחור תאריך שבוע', 'warning'); return; }
+      const result = await API.analyzeText({
+        text, week_date: weekDate,
+        week_number: weekNumber ? parseInt(weekNumber) : null,
+        line_id: lineId || null
+      });
+      currentWeekDate = weekDate;
+      displayResults(result.result, weekDate, weekNumber);
+      showAlert(`✅ ניתוח הושלם!`, 'success');
+      loadHistory();
+    }
   } catch (err) {
     showAlert(`❌ ${err.message}`, 'danger');
   } finally {

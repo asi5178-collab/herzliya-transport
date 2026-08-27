@@ -40,27 +40,43 @@ router.get('/:id', (req, res) => {
 });
 
 router.put('/:id', requireRole('admin'), (req, res) => {
-  const { name, description, capacity, vehicle_type, waypoints, zone_ids, status } = req.body;
+  const { name, description, capacity, vehicle_type, waypoints, zone_ids, status, ai_enabled, route_type, school_from, school_to } = req.body;
   const db = getDb();
   db.prepare(`
-    UPDATE lines SET name=?, description=?, capacity=?, vehicle_type=?, waypoints=?, zone_ids=?, status=?
+    UPDATE lines SET name=?, description=?, capacity=?, vehicle_type=?, waypoints=?, zone_ids=?, status=?,
+      ai_enabled=?, route_type=?, school_from=?, school_to=?
     WHERE id=?
   `).run(name, description, capacity, vehicle_type,
-    JSON.stringify(waypoints || []), JSON.stringify(zone_ids || []), status, req.params.id);
+    JSON.stringify(waypoints || []), JSON.stringify(zone_ids || []), status,
+    ai_enabled != null ? (ai_enabled ? 1 : 0) : 1,
+    route_type || 'regular', school_from || null, school_to || null,
+    req.params.id);
   res.json({ success: true });
 });
 
+// Toggle AI per line (research A/B)
+router.patch('/:id/ai-toggle', requireRole('admin'), (req, res) => {
+  const db = getDb();
+  const line = db.prepare('SELECT id, ai_enabled FROM lines WHERE id = ?').get(req.params.id);
+  if (!line) return res.status(404).json({ error: 'קו לא נמצא' });
+  const newVal = line.ai_enabled ? 0 : 1;
+  db.prepare('UPDATE lines SET ai_enabled=? WHERE id=?').run(newVal, req.params.id);
+  res.json({ success: true, ai_enabled: newVal });
+});
+
 router.post('/', requireRole('admin'), (req, res) => {
-  const { name, code, description, capacity, vehicle_type, waypoints, zone_ids, status } = req.body;
+  const { name, code, description, capacity, vehicle_type, waypoints, zone_ids, status, ai_enabled, route_type, school_from, school_to } = req.body;
   if (!name || !code) return res.status(400).json({ error: 'שם וקוד קו חובה' });
 
   const db = getDb();
   try {
     const result = db.prepare(`
-      INSERT INTO lines (name, code, description, capacity, vehicle_type, waypoints, zone_ids, status)
-      VALUES (?,?,?,?,?,?,?,?)
+      INSERT INTO lines (name, code, description, capacity, vehicle_type, waypoints, zone_ids, status, ai_enabled, route_type, school_from, school_to)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(name, code, description, capacity || 18, vehicle_type || 'minibus',
-      JSON.stringify(waypoints || []), JSON.stringify(zone_ids || []), status || 'active');
+      JSON.stringify(waypoints || []), JSON.stringify(zone_ids || []), status || 'active',
+      ai_enabled != null ? (ai_enabled ? 1 : 0) : 1,
+      route_type || 'regular', school_from || null, school_to || null);
     res.json({ id: result.lastInsertRowid, success: true });
   } catch (e) {
     if (e.message.includes('UNIQUE')) return res.status(400).json({ error: 'קוד קו כבר קיים' });
