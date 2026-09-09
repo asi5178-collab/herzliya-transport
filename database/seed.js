@@ -69,10 +69,10 @@ function doSeed(db) {
       { order: 3, lat: 32.162, lng: 34.805, label: 'תיכון עירוני',      time: '07:35' }
     ]);
     const insertLine = db.prepare(`INSERT OR IGNORE INTO lines (name, code, description, capacity, vehicle_type, waypoints, zone_ids, status, ai_enabled, route_type, school_from, school_to) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
-    // קווים קיימים
-    insertLine.run('קו 1א', '1A', 'קו ראשי - מרינה ונוף ים',    18, 'minibus', wp1A, JSON.stringify([1,2]), 'active', 1, 'regular', null, null);
-    insertLine.run('קו 1ב', '1B', 'קו משני - הרצליה פיתוח',      18, 'minibus', wp1B, JSON.stringify([3,4]), 'active', 0, 'regular', null, null);
-    insertLine.run('קו 1ג', '1C', 'קו מתוכנן - אזור תעשייה',     50, 'bus',     JSON.stringify([]), JSON.stringify([5]), 'planned', 1, 'regular', null, null);
+    // קווי מחקר — קבוצת ניסוי עם AI (קו 1 7א/ב/ג)
+    insertLine.run('קו 1 7א', '1A', 'קו מחקר — ניסוי עם AI — מרינה ונוף ים',   18, 'minibus', wp1A, JSON.stringify([1,2]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1 7ב', '1B', 'קו מחקר — ניסוי עם AI — הרצליה פיתוח',   18, 'minibus', wp1B, JSON.stringify([3,4]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1 7ג', '1C', 'קו מחקר — ניסוי עם AI — אזור תעשייה',    50, 'bus',     JSON.stringify([]), JSON.stringify([5]), 'active', 1, 'regular', null, null);
 
     // קווי סקיפר 1-10 (רשת תשפ"ז)
     const skipWp = JSON.stringify([]);
@@ -99,10 +99,7 @@ function doSeed(db) {
     insertLine.run('מהלך 7 – הנדיב/אלתרמן → מבנה קבע','M7',  'מעבר אלתרמן והנדיב למבנה הקבע תשפ"ז',                  50, 'bus', skipWp, JSON.stringify([]), 'active',  0, 'mahalakim', 'הנדיב', 'אלתרמן');
     insertLine.run('מהלך 8 – גליל ים → קריית החינוך',  'M8',  'הקמת חט"ב ותיכון בקריית החינוך גליל ים (406)',           50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'גליל ים', 'גליל ים');
 
-    // קווי מחקר — קבוצת ניסוי (AI מופעל) + קבוצת ביקורת (ללא AI)
-    insertLine.run('קו 1 7א', '17A', 'קו מחקר — ניסוי עם AI — מרינה צפון',   18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
-    insertLine.run('קו 1 7ב', '17B', 'קו מחקר — ניסוי עם AI — מרינה דרום',   18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
-    insertLine.run('קו 1 7ג', '17C', 'קו מחקר — ניסוי עם AI — נוף ים',       18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
+    // קווי ביקורת — ללא AI (קו 3, 8, 9)
     insertLine.run('קו 3',    'L3',  'קו ביקורת — ללא AI — הרצליה פיתוח',    18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
     insertLine.run('קו 8',    'L8',  'קו ביקורת — ללא AI — הרצליה ב׳',       18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
     insertLine.run('קו 9',    'L9',  'קו ביקורת — ללא AI — אזור תעשייה',     18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);

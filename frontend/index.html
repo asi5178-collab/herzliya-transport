@@ -126,7 +126,7 @@
           <div class="card-title" style="margin-bottom:0;">
             <i class="bi bi-bar-chart-line" style="color:#7c3aed;"></i> מחקר: השוואת RUP — קבוצת ניסוי (AI) מול קבוצת ביקורת
           </div>
-          <div style="font-size:11px;color:#94a3b8;">קו 17א, 17ב, 17ג (AI) · קו 3, 8, 9 (ביקורת)</div>
+          <div style="font-size:11px;color:#94a3b8;">קו 1 7א, 1 7ב, 1 7ג (AI) · קו 3, 8, 9 (ביקורת)</div>
         </div>
         <div id="researchMsg" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:13px;">אין עדיין נתוני שימוש בקווי המחקר</div>
         <div class="chart-wrapper" style="height:220px;"><canvas id="researchChart"></canvas></div>
@@ -299,7 +299,7 @@ async function loadDashboard() {
         data: {
           labels: resWeeks,
           datasets: [{
-            label: 'קבוצת ניסוי — AI (17א, 17ב, 17ג) ממוצע RUP%',
+            label: 'קבוצת ניסוי — AI (קו 1 7א, 1 7ב, 1 7ג) ממוצע RUP%',
             data: researchData.map(w => w.avg_rup_ai),
             borderColor: '#7c3aed', backgroundColor: '#7c3aed20',
             tension: 0.4, fill: true, pointRadius: 6, borderWidth: 2.5, spanGaps: true

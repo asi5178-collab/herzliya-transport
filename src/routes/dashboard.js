@@ -140,7 +140,7 @@ router.get('/research-comparison', (req, res) => {
   try {
     const db = getDb();
     // קווי מחקר: 17A, 17B, 17C (ai_enabled=1) ו-L3, L8, L9 (ai_enabled=0)
-    const researchCodes = ['17A','17B','17C','L3','L8','L9'];
+    const researchCodes = ['1A','1B','1C','L3','L8','L9'];
     const placeholders = researchCodes.map(() => '?').join(',');
 
     const rows = db.prepare(`
