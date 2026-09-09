@@ -100,9 +100,9 @@ function doSeed(db) {
     insertLine.run('מהלך 8 – גליל ים → קריית החינוך',  'M8',  'הקמת חט"ב ותיכון בקריית החינוך גליל ים (406)',           50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'גליל ים', 'גליל ים');
 
     // קווי מחקר — קבוצת ניסוי (AI מופעל) + קבוצת ביקורת (ללא AI)
-    insertLine.run('קו 17א',  '17A', 'קו מחקר — ניסוי עם AI — מרינה צפון',   18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
-    insertLine.run('קו 17ב',  '17B', 'קו מחקר — ניסוי עם AI — מרינה דרום',   18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
-    insertLine.run('קו 17ג',  '17C', 'קו מחקר — ניסוי עם AI — נוף ים',       18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1 7א', '17A', 'קו מחקר — ניסוי עם AI — מרינה צפון',   18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1 7ב', '17B', 'קו מחקר — ניסוי עם AI — מרינה דרום',   18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1 7ג', '17C', 'קו מחקר — ניסוי עם AI — נוף ים',       18, 'minibus', skipWp, JSON.stringify([]), 'active', 1, 'regular', null, null);
     insertLine.run('קו 3',    'L3',  'קו ביקורת — ללא AI — הרצליה פיתוח',    18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
     insertLine.run('קו 8',    'L8',  'קו ביקורת — ללא AI — הרצליה ב׳',       18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
     insertLine.run('קו 9',    'L9',  'קו ביקורת — ללא AI — אזור תעשייה',     18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
