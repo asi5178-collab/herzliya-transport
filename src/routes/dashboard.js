@@ -135,4 +135,44 @@ router.get('/weekly-summary', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// השוואת מחקר: קבוצת ניסוי (AI) מול קבוצת ביקורת (ללא AI)
+router.get('/research-comparison', (req, res) => {
+  try {
+    const db = getDb();
+    // קווי מחקר: 17A, 17B, 17C (ai_enabled=1) ו-L3, L8, L9 (ai_enabled=0)
+    const researchCodes = ['17A','17B','17C','L3','L8','L9'];
+    const placeholders = researchCodes.map(() => '?').join(',');
+
+    const rows = db.prepare(`
+      SELECT wr.week_number, wr.week_date, l.code, l.name as line_name, l.ai_enabled,
+             wr.actual_riders, wr.registered_students,
+             ROUND(100.0 * wr.actual_riders / wr.registered_students, 1) as rup_percent
+      FROM weekly_ridership wr
+      JOIN lines l ON wr.line_id = l.id
+      WHERE l.code IN (${placeholders}) AND wr.week_number IS NOT NULL
+      ORDER BY wr.week_number ASC, l.code
+    `).all(...researchCodes);
+
+    // קיבוץ לפי שבוע + קבוצה
+    const weeks = {};
+    for (const r of rows) {
+      if (!weeks[r.week_number]) {
+        weeks[r.week_number] = { week_number: r.week_number, week_date: r.week_date, ai_lines: [], control_lines: [] };
+      }
+      const entry = { code: r.code, name: r.line_name, rup: r.rup_percent };
+      if (r.ai_enabled) weeks[r.week_number].ai_lines.push(entry);
+      else              weeks[r.week_number].control_lines.push(entry);
+    }
+
+    // ממוצע לפי קבוצה לכל שבוע
+    const result = Object.values(weeks).map(w => {
+      const aiRup  = w.ai_lines.length  ? (w.ai_lines.reduce((s,l)=>s+(l.rup||0),0)  / w.ai_lines.length).toFixed(1)  : null;
+      const ctlRup = w.control_lines.length ? (w.control_lines.reduce((s,l)=>s+(l.rup||0),0) / w.control_lines.length).toFixed(1) : null;
+      return { ...w, avg_rup_ai: aiRup ? +aiRup : null, avg_rup_control: ctlRup ? +ctlRup : null };
+    });
+
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;

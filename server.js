@@ -23,6 +23,7 @@ try {
     "ALTER TABLE lines ADD COLUMN route_type TEXT DEFAULT 'regular'",
     "ALTER TABLE lines ADD COLUMN school_from TEXT",
     "ALTER TABLE lines ADD COLUMN school_to TEXT",
+    "ALTER TABLE tasks ADD COLUMN completion_note TEXT",
     `CREATE TABLE IF NOT EXISTS student_analysis (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       week_date DATE NOT NULL,

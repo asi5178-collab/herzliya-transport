@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,18 +13,12 @@
 .task-row:hover { background:#f8fafc; }
 .task-row.done .task-title { text-decoration:line-through; color:#94a3b8; }
 
-.cat-badge {
-  padding:2px 9px; border-radius:12px; font-size:11px; font-weight:700;
-  white-space:nowrap; flex-shrink:0;
-}
+.cat-badge { padding:2px 9px; border-radius:12px; font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0; }
 .cat-שיפור  { background:#dbeafe; color:#1d4ed8; }
 .cat-שימור  { background:#1e3a8a; color:#fff; }
 .cat-ביצוע  { background:#fef3c7; color:#92400e; }
 
-.week-badge {
-  background:#1e3a8a; color:#fff; border-radius:6px;
-  padding:2px 7px; font-size:11px; font-weight:700; flex-shrink:0;
-}
+.week-badge { background:#1e3a8a; color:#fff; border-radius:6px; padding:2px 7px; font-size:11px; font-weight:700; flex-shrink:0; }
 
 .num-badge {
   min-width:28px; height:28px; border-radius:6px;
@@ -32,28 +26,34 @@
   display:flex; align-items:center; justify-content:center;
   font-size:12px; font-weight:700; flex-shrink:0;
 }
+.stakeholder-chip { background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; }
 
-.stakeholder-chip {
-  background:#f1f5f9; color:#475569;
-  padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;
-}
-
-.tab-btn {
-  padding:5px 14px; border-radius:20px; font-size:12px; cursor:pointer;
-  border:1px solid #e2e8f0; background:white; color:#64748b;
-  transition:all .15s; font-family:inherit; font-weight:500;
-}
+.tab-btn { padding:5px 14px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid #e2e8f0; background:white; color:#64748b; transition:all .15s; font-family:inherit; font-weight:500; }
 .tab-btn.active { background:#1e3a8a; color:white; border-color:#1e3a8a; }
 
-.stat-box {
-  text-align:center; padding:12px 20px; border-radius:10px; border:1px solid #e2e8f0; background:white;
-}
+.stat-box { text-align:center; padding:12px 20px; border-radius:10px; border:1px solid #e2e8f0; background:white; }
 .stat-num { font-size:26px; font-weight:800; line-height:1; }
 .stat-lbl { font-size:11px; color:#94a3b8; margin-top:2px; }
 
-.new-task-form {
-  background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px; margin-bottom:16px;
-}
+.new-task-form { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:16px; margin-bottom:16px; }
+
+/* Completion note mini-modal */
+#noteOverlay { position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;display:flex;align-items:center;justify-content:center; }
+#noteBox { background:white;border-radius:12px;padding:22px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2); }
+#noteBox h4 { margin:0 0 6px;font-size:15px;font-weight:700; }
+#noteBox p { font-size:12px;color:#64748b;margin:0 0 12px; }
+#noteText { width:100%;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:vertical;min-height:70px; }
+#noteText:focus { outline:none;border-color:#1e3a8a; }
+.note-actions { display:flex;gap:8px;justify-content:flex-end;margin-top:10px; }
+
+/* Analysis tab */
+.analysis-section { background:white;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden; }
+.analysis-group { border-bottom:1px solid #e2e8f0; }
+.analysis-group-header { background:#f8fafc;padding:10px 16px;font-size:12px;font-weight:700;color:#475569;letter-spacing:.04em; }
+.completion-item { padding:10px 16px;border-bottom:1px solid #f1f5f9;font-size:12px; }
+.completion-item:last-child { border-bottom:none; }
+.completion-title { font-weight:600;color:#1e293b;margin-bottom:4px; }
+.completion-note-text { color:#374151;background:#f0fdf4;border-right:3px solid #16a34a;padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;line-height:1.6; }
 </style>
 </head>
 <body>
@@ -91,24 +91,33 @@
       <!-- Stats bar -->
       <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;" id="statsBar">
         <div class="stat-box"><div class="stat-num" id="stTotal">-</div><div class="stat-lbl">סה"כ</div></div>
-        <div class="stat-box"><div class="stat-num" id="stOpen" style="color:#dc2626;">-</div><div class="stat-lbl">פתוחות</div></div>
-        <div class="stat-box"><div class="stat-num" id="stDone" style="color:#16a34a;">-</div><div class="stat-lbl">הושלמו</div></div>
+        <div class="stat-box" style="cursor:pointer;" onclick="setFilter('open',null)"><div class="stat-num" id="stOpen" style="color:#dc2626;">-</div><div class="stat-lbl">פתוחות</div></div>
+        <div class="stat-box" style="cursor:pointer;" onclick="setFilter('done',null)"><div class="stat-num" id="stDone" style="color:#16a34a;">-</div><div class="stat-lbl">הושלמו</div></div>
         <div class="stat-box"><div class="stat-num" id="stShimur" style="color:#1e3a8a;">-</div><div class="stat-lbl">שימור</div></div>
         <div class="stat-box"><div class="stat-num" id="stShipur" style="color:#1d4ed8;">-</div><div class="stat-lbl">שיפור</div></div>
         <div class="stat-box"><div class="stat-num" id="stBitzua" style="color:#92400e;">-</div><div class="stat-lbl">ביצוע</div></div>
         <div class="stat-box"><div class="stat-num" id="stOverdue" style="color:#f97316;">-</div><div class="stat-lbl">באיחור</div></div>
+        <div class="stat-box" style="cursor:pointer;border-color:#16a34a;" onclick="showTab('analysis')">
+          <div class="stat-num" id="stNotes" style="color:#16a34a;">-</div><div class="stat-lbl">עם הערת ביצוע</div>
+        </div>
       </div>
 
-      <!-- Filter bar -->
+      <!-- Tab bar -->
       <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
-        <button class="tab-btn active" onclick="setFilter('all',this)">הכל</button>
-        <button class="tab-btn" onclick="setFilter('open',this)">פתוחות</button>
-        <button class="tab-btn" onclick="setFilter('done',this)">הושלמו</button>
-        <button class="tab-btn" onclick="setFilter('in_progress',this)">ביצוע</button>
-        <button class="tab-btn" onclick="setFilter('שיפור',this)">שיפור</button>
-        <button class="tab-btn" onclick="setFilter('שימור',this)">שימור</button>
-        <button class="tab-btn" onclick="setFilter('manual',this)">ידני</button>
-        <div style="margin-right:auto;display:flex;gap:6px;align-items:center;">
+        <button class="tab-btn active" id="tabTasks" onclick="showTab('tasks')"><i class="bi bi-list-task"></i> משימות</button>
+        <button class="tab-btn" id="tabAnalysis" onclick="showTab('analysis')"><i class="bi bi-bar-chart-line"></i> ניתוח ביצוע</button>
+
+        <div id="taskFilterBar" style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="tab-btn active" id="filterAll" onclick="setFilter('all',this)">הכל</button>
+          <button class="tab-btn" onclick="setFilter('open',this)">פתוחות</button>
+          <button class="tab-btn" onclick="setFilter('done',this)">הושלמו</button>
+          <button class="tab-btn" onclick="setFilter('in_progress',this)">ביצוע</button>
+          <button class="tab-btn" onclick="setFilter('שיפור',this)">שיפור</button>
+          <button class="tab-btn" onclick="setFilter('שימור',this)">שימור</button>
+          <button class="tab-btn" onclick="setFilter('manual',this)">ידני</button>
+        </div>
+
+        <div style="margin-right:auto;display:flex;gap:6px;align-items:center;" id="taskActions">
           <select id="stakeFilter" class="form-control" style="width:160px;font-size:12px;" onchange="render()">
             <option value="">כל בעלי העניין</option>
           </select>
@@ -128,6 +137,7 @@
               <option value="">--</option>
               <option>W-18</option><option>W-19</option><option>W-20</option>
               <option>W-21</option><option>W-22</option><option>W-23</option>
+              <option>W-24</option><option>W-25</option><option>W-26</option>
             </select>
           </div>
         </div>
@@ -140,24 +150,13 @@
             </select>
           </div>
           <div><label class="form-label" style="font-size:11px;">קטגוריה</label>
-            <select id="fCat" class="form-control">
-              <option value="שיפור">שיפור</option>
-              <option value="שימור">שימור</option>
-              <option value="ביצוע">ביצוע</option>
-            </select>
+            <select id="fCat" class="form-control"><option value="שיפור">שיפור</option><option value="שימור">שימור</option><option value="ביצוע">ביצוע</option></select>
           </div>
           <div><label class="form-label" style="font-size:11px;">עדיפות</label>
-            <select id="fPri" class="form-control">
-              <option value="high">דחוף</option>
-              <option value="medium" selected>בינוני</option>
-              <option value="low">נמוך</option>
-            </select>
+            <select id="fPri" class="form-control"><option value="high">דחוף</option><option value="medium" selected>בינוני</option><option value="low">נמוך</option></select>
           </div>
           <div><label class="form-label" style="font-size:11px;">מקור</label>
-            <select id="fSrc" class="form-control">
-              <option value="manual">ידני</option>
-              <option value="analysis">ניתוח Claude</option>
-            </select>
+            <select id="fSrc" class="form-control"><option value="manual">ידני</option><option value="analysis">ניתוח Claude</option></select>
           </div>
           <div style="display:flex;gap:6px;">
             <button onclick="saveTask()" class="btn btn-success btn-sm"><i class="bi bi-plus-lg"></i> הוסף</button>
@@ -168,14 +167,50 @@
       </div>
 
       <!-- Task list -->
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div id="taskList"></div>
-        <div id="emptyMsg" style="display:none;text-align:center;padding:40px;color:#94a3b8;">
-          <div style="font-size:32px;margin-bottom:8px;">✅</div>
-          <div>אין משימות בסינון זה</div>
+      <div id="tasksSection">
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div id="taskList"></div>
+          <div id="emptyMsg" style="display:none;text-align:center;padding:40px;color:#94a3b8;">
+            <div style="font-size:32px;margin-bottom:8px;">✅</div>
+            <div>אין משימות בסינון זה</div>
+          </div>
         </div>
       </div>
 
+      <!-- Analysis section -->
+      <div id="analysisSection" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;" id="analysisKPIs"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+          <div class="card">
+            <div class="card-title"><i class="bi bi-people" style="color:#1e3a8a;"></i> ביצוע לפי בעל עניין</div>
+            <div id="byStakeholderTable"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-tags" style="color:#7c3aed;"></i> ביצוע לפי קטגוריה</div>
+            <div id="byCategoryTable"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i class="bi bi-journal-check" style="color:#16a34a;"></i> הערות ביצוע — מה בוצע</div>
+          <div id="completionNotesList"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Completion note mini-modal -->
+<div id="noteOverlay" style="display:none;" onclick="if(event.target===this)cancelNote()">
+  <div id="noteBox">
+    <h4>✅ סיום משימה</h4>
+    <p>ניתן להוסיף הערה קצרה על מה שבוצע (לא חובה)</p>
+    <textarea id="noteText" placeholder="לדוגמה: הועבר מייל להורים, תוקן לוח זמנים, נשלחה הודעה בWhatsApp..."></textarea>
+    <div class="note-actions">
+      <button onclick="cancelNote()" class="btn btn-outline btn-sm">ביטול</button>
+      <button onclick="confirmNote()" class="btn btn-success btn-sm"><i class="bi bi-check-lg"></i> סגור משימה</button>
     </div>
   </div>
 </div>
@@ -191,9 +226,7 @@
     <div class="form-group"><label class="form-label">תיאור</label><textarea id="mDesc" class="form-control" rows="2"></textarea></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div class="form-group"><label class="form-label">קטגוריה</label>
-        <select id="mCat" class="form-control">
-          <option>שיפור</option><option>שימור</option><option>ביצוע</option>
-        </select>
+        <select id="mCat" class="form-control"><option>שיפור</option><option>שימור</option><option>ביצוע</option></select>
       </div>
       <div class="form-group"><label class="form-label">בעל עניין</label>
         <select id="mStake" class="form-control">
@@ -203,21 +236,19 @@
         </select>
       </div>
       <div class="form-group"><label class="form-label">סטטוס</label>
-        <select id="mStatus" class="form-control">
-          <option value="open">פתוח</option>
-          <option value="in_progress">בביצוע</option>
-          <option value="done">הושלם</option>
+        <select id="mStatus" class="form-control" onchange="toggleNoteField()">
+          <option value="open">פתוח</option><option value="in_progress">בביצוע</option><option value="done">הושלם</option>
         </select>
       </div>
       <div class="form-group"><label class="form-label">עדיפות</label>
-        <select id="mPri" class="form-control">
-          <option value="high">דחוף</option>
-          <option value="medium">בינוני</option>
-          <option value="low">נמוך</option>
-        </select>
+        <select id="mPri" class="form-control"><option value="high">דחוף</option><option value="medium">בינוני</option><option value="low">נמוך</option></select>
       </div>
       <div class="form-group"><label class="form-label">יעד</label><input type="date" id="mDeadline" class="form-control"></div>
       <div class="form-group"><label class="form-label">אחראי</label><input type="text" id="mAssignee" class="form-control"></div>
+    </div>
+    <div class="form-group" id="completionNoteField">
+      <label class="form-label" style="color:#16a34a;"><i class="bi bi-journal-check"></i> מה בוצע?</label>
+      <textarea id="mCompletionNote" class="form-control" rows="2" placeholder="תיאור קצר של הטיפול שבוצע..."></textarea>
     </div>
     <div style="display:flex;gap:8px;justify-content:space-between;margin-top:16px;">
       <button onclick="deleteTask()" class="btn btn-danger btn-sm" id="delBtn"><i class="bi bi-trash"></i> מחק</button>
@@ -237,20 +268,121 @@ document.getElementById('userBadge').textContent = Auth.getUser()?.full_name || 
 if (!canEdit) { document.getElementById('addBtn').style.display='none'; }
 
 let allTasks = [], currentFilter = 'all', editId = null;
+let pendingDoneId = null;
+let currentTab = 'tasks';
 
+// ─── Load ───
 async function load() {
   allTasks = await API.tasks();
-
-  // Populate stakeholder filter
   const stakes = [...new Set(allTasks.map(t=>t.stakeholder).filter(Boolean))].sort();
   const sel = document.getElementById('stakeFilter');
   sel.innerHTML = '<option value="">כל בעלי העניין</option>';
   stakes.forEach(s => sel.appendChild(new Option(s, s)));
-
   updateStats();
   render();
 }
 
+async function loadAnalysis() {
+  const stats = await API.taskStats();
+
+  // KPIs
+  const pct = stats.all ? Math.round(100 * stats.done / stats.all) : 0;
+  document.getElementById('analysisKPIs').innerHTML = `
+    <div class="stat-box"><div class="stat-num" style="color:#16a34a;">${stats.done}</div><div class="stat-lbl">הושלמו</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#dc2626;">${stats.open}</div><div class="stat-lbl">פתוחות</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#2563eb;">${pct}%</div><div class="stat-lbl">אחוז ביצוע</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#f97316;">${stats.overdue}</div><div class="stat-lbl">באיחור</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#dc2626;">${stats.high}</div><div class="stat-lbl">דחופות פתוחות</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#16a34a;">${stats.completed.length}</div><div class="stat-lbl">עם הערת ביצוע</div></div>
+  `;
+
+  // By stakeholder
+  document.getElementById('byStakeholderTable').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#f8fafc;">
+        <th style="padding:7px 12px;text-align:right;color:#64748b;border-bottom:1px solid #e2e8f0;">בעל עניין</th>
+        <th style="padding:7px 12px;text-align:center;color:#64748b;border-bottom:1px solid #e2e8f0;">פתוח</th>
+        <th style="padding:7px 12px;text-align:center;color:#64748b;border-bottom:1px solid #e2e8f0;">הושלם</th>
+        <th style="padding:7px 12px;text-align:center;color:#64748b;border-bottom:1px solid #e2e8f0;">%</th>
+      </tr></thead>
+      <tbody>
+        ${stats.byStakeholder.map((r,i) => {
+          const p = r.total ? Math.round(100*r.done_count/r.total) : 0;
+          return `<tr style="background:${i%2?'#f8fafc':'white'}">
+            <td style="padding:7px 12px;font-weight:600;">${r.stakeholder}</td>
+            <td style="padding:7px 12px;text-align:center;color:#dc2626;">${r.open_count}</td>
+            <td style="padding:7px 12px;text-align:center;color:#16a34a;">${r.done_count}</td>
+            <td style="padding:7px 12px;text-align:center;">
+              <div style="background:#e2e8f0;border-radius:10px;height:6px;width:60px;display:inline-block;vertical-align:middle;margin-left:4px;">
+                <div style="background:${p>=70?'#16a34a':p>=40?'#d97706':'#dc2626'};height:6px;border-radius:10px;width:${p}%;"></div>
+              </div>
+              ${p}%
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  // By category
+  document.getElementById('byCategoryTable').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#f8fafc;">
+        <th style="padding:7px 12px;text-align:right;color:#64748b;border-bottom:1px solid #e2e8f0;">קטגוריה</th>
+        <th style="padding:7px 12px;text-align:center;color:#64748b;border-bottom:1px solid #e2e8f0;">סה"כ</th>
+        <th style="padding:7px 12px;text-align:center;color:#64748b;border-bottom:1px solid #e2e8f0;">הושלמו</th>
+        <th style="padding:7px 12px;text-align:center;color:#64748b;border-bottom:1px solid #e2e8f0;">%</th>
+      </tr></thead>
+      <tbody>
+        ${stats.byCategory.map((r,i) => {
+          const p = r.total ? Math.round(100*r.done_count/r.total) : 0;
+          return `<tr style="background:${i%2?'#f8fafc':'white'}">
+            <td style="padding:7px 12px;font-weight:600;">${r.category}</td>
+            <td style="padding:7px 12px;text-align:center;">${r.total}</td>
+            <td style="padding:7px 12px;text-align:center;color:#16a34a;">${r.done_count}</td>
+            <td style="padding:7px 12px;text-align:center;font-weight:700;color:${p>=70?'#16a34a':p>=40?'#d97706':'#dc2626'}">${p}%</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  // Completion notes
+  if (!stats.completed.length) {
+    document.getElementById('completionNotesList').innerHTML = '<div style="padding:20px;text-align:center;color:#94a3b8;font-size:12px;">אין עדיין הערות ביצוע — הוסף הערת ביצוע בעת סגירת משימה</div>';
+    return;
+  }
+  // Group by stakeholder
+  const groups = {};
+  stats.completed.forEach(t => {
+    const k = t.stakeholder || 'כללי';
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(t);
+  });
+  let html = '';
+  for (const [stake, items] of Object.entries(groups)) {
+    html += `<div class="analysis-group">
+      <div class="analysis-group-header">${stake.toUpperCase()} (${items.length})</div>
+      ${items.map(t => `
+        <div class="completion-item">
+          <div class="completion-title">${t.title} <span style="font-size:10px;color:#94a3b8;font-weight:400;">${t.week_number ? `W-${t.week_number}` : ''}</span></div>
+          <div class="completion-note-text">${t.completion_note}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+  document.getElementById('completionNotesList').innerHTML = html;
+}
+
+// ─── Tabs ───
+function showTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabTasks').classList.toggle('active', tab==='tasks');
+  document.getElementById('tabAnalysis').classList.toggle('active', tab==='analysis');
+  document.getElementById('tasksSection').style.display    = tab==='tasks' ? '' : 'none';
+  document.getElementById('analysisSection').style.display = tab==='analysis' ? '' : 'none';
+  document.getElementById('taskFilterBar').style.display   = tab==='tasks' ? '' : 'none';
+  if (tab === 'analysis') loadAnalysis();
+}
+
+// ─── Stats ───
 function updateStats() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('stTotal').textContent   = allTasks.length;
@@ -260,8 +392,10 @@ function updateStats() {
   document.getElementById('stShipur').textContent  = allTasks.filter(t=>t.category==='שיפור').length;
   document.getElementById('stBitzua').textContent  = allTasks.filter(t=>t.category==='ביצוע'||t.status==='in_progress').length;
   document.getElementById('stOverdue').textContent = allTasks.filter(t=>t.deadline&&t.deadline<today&&t.status!=='done').length;
+  document.getElementById('stNotes').textContent   = allTasks.filter(t=>t.completion_note).length;
 }
 
+// ─── Filter + Render ───
 function getFiltered() {
   const stakeF = document.getElementById('stakeFilter').value;
   let tasks = allTasks;
@@ -271,7 +405,6 @@ function getFiltered() {
   if (currentFilter === 'done')        return tasks.filter(t=>t.status==='done');
   if (currentFilter === 'in_progress') return tasks.filter(t=>t.status==='in_progress');
   if (currentFilter === 'manual')      return tasks.filter(t=>t.source==='manual');
-  // category filter (שיפור/שימור)
   return tasks.filter(t=>t.category===currentFilter);
 }
 
@@ -286,7 +419,6 @@ function render() {
   }
   document.getElementById('emptyMsg').style.display = 'none';
 
-  // Group by stakeholder
   const byStake = {};
   filtered.forEach(t => {
     const s = t.stakeholder || 'אחר';
@@ -296,7 +428,14 @@ function render() {
 
   let html = '';
   for (const [stake, tasks] of Object.entries(byStake)) {
-    html += `<div style="background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.04em;border-bottom:1px solid #e2e8f0;">${stake.toUpperCase()} <span style="font-weight:400;color:#94a3b8;">(${tasks.length})</span></div>`;
+    const open = tasks.filter(t=>t.status!=='done').length;
+    const done = tasks.filter(t=>t.status==='done').length;
+    html += `<div style="background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.04em;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+      <span>${stake.toUpperCase()}</span>
+      <span style="font-weight:400;font-size:10px;">
+        <span style="color:#dc2626;">${open} פתוח</span> &nbsp;·&nbsp; <span style="color:#16a34a;">${done} הושלם</span>
+      </span>
+    </div>`;
     tasks.forEach(t => {
       const overdue = t.deadline && t.deadline < today && t.status !== 'done';
       const daysLeft = t.deadline ? Math.ceil((new Date(t.deadline) - new Date()) / 86400000) : null;
@@ -307,37 +446,62 @@ function render() {
         <div style="flex:1;min-width:0;">
           <div class="task-title" style="font-size:13px;font-weight:${t.status!=='done'?'500':'400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.title}</div>
           ${t.description?`<div style="font-size:11px;color:#94a3b8;margin-top:1px;">${t.description}</div>`:''}
+          ${t.completion_note?`<div style="font-size:11px;color:#16a34a;margin-top:2px;"><i class="bi bi-journal-check"></i> ${t.completion_note}</div>`:''}
         </div>
         <span class="cat-badge cat-${t.category||'שיפור'}">${t.category||'שיפור'}</span>
         ${t.week_number?`<span class="week-badge">W-${t.week_number}</span>`:''}
         <span class="stakeholder-chip">${t.stakeholder||''}</span>
         ${t.deadline?`<span style="font-size:11px;color:${overdue?'#dc2626':'#94a3b8'};">${formatDate(t.deadline)}</span>`:''}
-        ${canEdit&&t.status!=='done'?`<button onclick="event.stopPropagation();quickDone(${t.id},null,true)" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">✓</button>`:''}
+        ${canEdit&&t.status!=='done'?`<button onclick="event.stopPropagation();askNote(${t.id})" style="background:#f0fdf4;color:#16a34a;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;">✓</button>`:''}
       </div>`;
     });
   }
-
   document.getElementById('taskList').innerHTML = html;
 }
 
 function setFilter(f, btn) {
   currentFilter = f;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#taskFilterBar .tab-btn').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  if (f === 'done' || f === 'open') {
+    // also switch to tasks tab
+    showTab('tasks');
+  }
   render();
 }
 
-async function quickDone(id, cb, forceCheck) {
-  const checked = forceCheck || (cb && cb.checked);
-  await API.taskStatus(id, checked ? 'done' : 'open');
+// ─── Completion note mini-modal ───
+function askNote(id) {
+  pendingDoneId = id;
+  document.getElementById('noteText').value = '';
+  document.getElementById('noteOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('noteText').focus(), 50);
+}
+function cancelNote() {
+  document.getElementById('noteOverlay').style.display = 'none';
+  pendingDoneId = null;
+}
+async function confirmNote() {
+  const note = document.getElementById('noteText').value.trim();
+  document.getElementById('noteOverlay').style.display = 'none';
+  if (!pendingDoneId) return;
+  await API.taskStatus(pendingDoneId, 'done', note || null);
   await load();
-  toast(checked ? '✅ משימה הושלמה' : 'פתיחה מחדש');
+  toast('✅ משימה הושלמה' + (note ? ' עם הערת ביצוע' : ''));
+  pendingDoneId = null;
+}
+async function quickDone(id, cb) {
+  if (cb && !cb.checked) {
+    await API.taskStatus(id, 'open', null);
+    await load();
+    toast('משימה נפתחה מחדש');
+  } else {
+    askNote(id);
+  }
 }
 
-function openAdd() {
-  document.getElementById('addForm').style.display = 'block';
-  document.getElementById('fOpen').value = new Date().toISOString().split('T')[0];
-}
+// ─── Add task ───
+function openAdd() { document.getElementById('addForm').style.display = 'block'; document.getElementById('fOpen').value = new Date().toISOString().split('T')[0]; }
 function closeAdd() { document.getElementById('addForm').style.display = 'none'; }
 
 async function saveTask() {
@@ -346,20 +510,18 @@ async function saveTask() {
   const wRaw = document.getElementById('fWeekNum').value;
   const wNum = wRaw ? parseInt(wRaw.replace('W-','')) : null;
   try {
-    await API.createTask({
-      title, priority: document.getElementById('fPri').value,
-      deadline: document.getElementById('fDeadline').value || null,
-      stakeholder: document.getElementById('fStake').value,
-      category: document.getElementById('fCat').value,
-      week_number: wNum,
-      source: document.getElementById('fSrc').value
-    });
+    await API.createTask({ title, priority: document.getElementById('fPri').value, deadline: document.getElementById('fDeadline').value||null, stakeholder: document.getElementById('fStake').value, category: document.getElementById('fCat').value, week_number: wNum, source: document.getElementById('fSrc').value });
     closeAdd(); document.getElementById('fTitle').value = '';
     await load(); toast('✅ משימה נוספה');
   } catch(err) { showAddAlert('❌ '+err.message,'danger'); }
 }
-
 function showAddAlert(msg,type){const el=document.getElementById('addAlert');el.className=`alert alert-${type}`;el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+
+// ─── Edit modal ───
+function toggleNoteField() {
+  const isDone = document.getElementById('mStatus').value === 'done';
+  document.getElementById('completionNoteField').style.display = isDone ? '' : 'none';
+}
 
 function openEdit(id) {
   const t = allTasks.find(t=>t.id===id); if(!t) return;
@@ -368,13 +530,14 @@ function openEdit(id) {
   document.getElementById('mDesc').value = t.description||'';
   document.getElementById('mDeadline').value = t.deadline||'';
   document.getElementById('mAssignee').value = t.assignee||'';
+  document.getElementById('mCompletionNote').value = t.completion_note||'';
   setSelVal('mCat',t.category||'שיפור');
   setSelVal('mStake',t.stakeholder||'ערן ראובני');
   setSelVal('mStatus',t.status||'open');
   setSelVal('mPri',t.priority||'medium');
+  toggleNoteField();
   document.getElementById('modal').style.display='flex';
 }
-
 function setSelVal(id,val){const el=document.getElementById(id);for(const o of el.options)if(o.value===val||o.text===val){o.selected=true;break;}}
 function closeModal(){document.getElementById('modal').style.display='none';}
 
@@ -388,7 +551,8 @@ async function updateTask(){
       deadline:document.getElementById('mDeadline').value,
       assignee:document.getElementById('mAssignee').value,
       stakeholder:document.getElementById('mStake').value,
-      category:document.getElementById('mCat').value
+      category:document.getElementById('mCat').value,
+      completion_note:document.getElementById('mCompletionNote').value||null
     });
     closeModal(); await load(); toast('✅ משימה עודכנה');
   } catch(err){toast('❌ '+err.message,'danger');}

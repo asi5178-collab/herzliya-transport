@@ -120,6 +120,19 @@
         </div>
       </div>
 
+      <!-- Research Comparison Chart -->
+      <div class="card" style="margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="card-title" style="margin-bottom:0;">
+            <i class="bi bi-bar-chart-line" style="color:#7c3aed;"></i> מחקר: השוואת RUP — קבוצת ניסוי (AI) מול קבוצת ביקורת
+          </div>
+          <div style="font-size:11px;color:#94a3b8;">קו 17א, 17ב, 17ג (AI) · קו 3, 8, 9 (ביקורת)</div>
+        </div>
+        <div id="researchMsg" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:13px;">אין עדיין נתוני שימוש בקווי המחקר</div>
+        <div class="chart-wrapper" style="height:220px;"><canvas id="researchChart"></canvas></div>
+        <div id="researchStats" style="margin-top:10px;font-size:12px;color:#64748b;text-align:center;display:flex;gap:20px;justify-content:center;flex-wrap:wrap;"></div>
+      </div>
+
       <!-- Weekly Summary Table -->
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -156,9 +169,10 @@ const RUP_TARGETS = { q2: 10, q4: 30, year2: 40 };
 
 async function loadDashboard() {
   try {
-    const [summary, rupTrend, npsTrend, corr, weekly, tasks, studentTrend] = await Promise.all([
+    const [summary, rupTrend, npsTrend, corr, weekly, tasks, studentTrend, researchData] = await Promise.all([
       API.summary(), API.rupTrend(), API.npsTrend(), API.correlation(), API.weeklySummary(), API.openTasks(),
-      API.get('/student-analysis/history').catch(() => [])
+      API.get('/student-analysis/history').catch(() => []),
+      API.researchComparison().catch(() => [])
     ]);
 
     // KPIs
@@ -272,6 +286,45 @@ async function loadDashboard() {
         }
       });
       document.getElementById('corrStats').innerHTML = `מקדם קורלציה פירסון: <strong>r = ${r}</strong> | ${Math.abs(r) > 0.6 ? '✅ קורלציה חזקה' : '⚠️ קורלציה חלשה'}`;
+    }
+
+    // Research Comparison Chart
+    if (!researchData || !researchData.length || researchData.every(w => w.avg_rup_ai === null && w.avg_rup_control === null)) {
+      document.getElementById('researchMsg').style.display = 'block';
+      document.getElementById('researchChart').style.display = 'none';
+    } else {
+      const resWeeks = researchData.map(w => `W-${w.week_number}`);
+      new Chart(document.getElementById('researchChart'), {
+        type: 'line',
+        data: {
+          labels: resWeeks,
+          datasets: [{
+            label: 'קבוצת ניסוי — AI (17א, 17ב, 17ג) ממוצע RUP%',
+            data: researchData.map(w => w.avg_rup_ai),
+            borderColor: '#7c3aed', backgroundColor: '#7c3aed20',
+            tension: 0.4, fill: true, pointRadius: 6, borderWidth: 2.5, spanGaps: true
+          }, {
+            label: 'קבוצת ביקורת — ללא AI (3, 8, 9) ממוצע RUP%',
+            data: researchData.map(w => w.avg_rup_control),
+            borderColor: '#f97316', backgroundColor: '#f9731620',
+            tension: 0.4, fill: true, pointRadius: 6, borderWidth: 2.5, spanGaps: true, borderDash: [6,3]
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true } } },
+          scales: { y: { beginAtZero: true, max: 60, title: { display: true, text: 'RUP %' } } }
+        }
+      });
+      // Summary stats
+      const lastWeekR = researchData[researchData.length - 1];
+      const diff = lastWeekR && lastWeekR.avg_rup_ai != null && lastWeekR.avg_rup_control != null
+        ? (lastWeekR.avg_rup_ai - lastWeekR.avg_rup_control).toFixed(1) : null;
+      document.getElementById('researchStats').innerHTML = `
+        <span style="color:#7c3aed;font-weight:600;">AI שבוע אחרון: ${lastWeekR?.avg_rup_ai ?? 'N/A'}%</span>
+        <span style="color:#f97316;font-weight:600;">ביקורת שבוע אחרון: ${lastWeekR?.avg_rup_control ?? 'N/A'}%</span>
+        ${diff !== null ? `<span style="color:${+diff>0?'#16a34a':'#dc2626'};font-weight:700;">פער: ${diff>0?'+':''}${diff}%</span>` : ''}
+      `;
     }
 
     // Tasks

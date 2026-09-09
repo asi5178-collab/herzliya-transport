@@ -45,6 +45,7 @@ const API = (() => {
     npsTrend: () => request('GET', '/dashboard/nps-trend'),
     correlation: () => request('GET', '/dashboard/correlation'),
     weeklySummary: () => request('GET', '/dashboard/weekly-summary'),
+    researchComparison: () => request('GET', '/dashboard/research-comparison'),
     openTasks: () => request('GET', '/dashboard/open-tasks'),
 
     // Zones
@@ -91,9 +92,10 @@ const API = (() => {
 
     // Tasks
     tasks: (status) => request('GET', `/tasks${status ? '?status=' + status : ''}`),
+    taskStats: () => request('GET', '/tasks/stats'),
     createTask: (d) => request('POST', '/tasks', d),
     updateTask: (id, d) => request('PUT', `/tasks/${id}`, d),
-    taskStatus: (id, s) => request('PATCH', `/tasks/${id}/status`, { status: s }),
+    taskStatus: (id, s, note) => request('PATCH', `/tasks/${id}/status`, { status: s, completion_note: note }),
 
     // Reports
     reports: () => request('GET', '/reports'),

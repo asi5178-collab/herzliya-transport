@@ -35,6 +35,7 @@
       <div style="font-size:15px;font-weight:600;"><i class="bi bi-people-fill" style="color:#f59e0b;"></i> ניהול תלמידים</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <span id="countBadge" style="background:#eff6ff;color:#1d4ed8;padding:4px 10px;border-radius:20px;font-size:12px;"></span>
+        <button onclick="generateStudentReport()" class="btn btn-outline btn-sm"><i class="bi bi-file-earmark-bar-graph"></i> הפק דוח</button>
         <button onclick="openAdd()" class="btn btn-primary btn-sm" id="addBtn"><i class="bi bi-plus"></i> הוסף תלמיד</button>
       </div>
     </div>
@@ -194,6 +195,76 @@ async function saveStudent() {
   } catch(err){showModalAlert('❌ '+err.message,'danger');}
 }
 function showModalAlert(msg,type){const el=document.getElementById('modalAlert');el.className=`alert alert-${type}`;el.textContent=msg;el.style.display='block';}
+
+async function generateStudentReport() {
+  const stats = await API.studentStats().catch(()=>null);
+  const students = await API.students({}).catch(()=>[]);
+  if (!stats || !students.length) { toast('אין נתוני תלמידים','danger'); return; }
+
+  const now = new Date().toLocaleDateString('he-IL');
+  // Build grouped data by line
+  const byLine = {};
+  students.forEach(s => {
+    const k = s.line_name || 'ללא קו';
+    if (!byLine[k]) byLine[k] = [];
+    byLine[k].push(s);
+  });
+
+  const lineRows = Object.entries(byLine).map(([lineName, stus]) => `
+    <tr>
+      <td>${lineName}</td>
+      <td>${stus.length}</td>
+      <td>${stus.filter(s=>s.zone_name).map(s=>s.zone_name).filter((v,i,a)=>a.indexOf(v)===i).join(', ') || '-'}</td>
+    </tr>`).join('');
+
+  const byZoneRows = stats.by_zone.map(z => `<tr><td>${z.name}</td><td>${z.count}</td></tr>`).join('');
+  const bySchoolRows = stats.by_school.map(s => `<tr><td>${s.name}</td><td>${s.count}</td></tr>`).join('');
+
+  const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">
+  <title>דוח תלמידים — ${now}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;direction:rtl;padding:30px;color:#1e293b;font-size:13px;}
+    h1{color:#1e3a8a;border-bottom:3px solid #1e3a8a;padding-bottom:8px;}
+    h2{color:#374151;font-size:15px;margin-top:24px;}
+    table{border-collapse:collapse;width:100%;margin-top:8px;}
+    th{background:#1e3a8a;color:white;padding:8px 12px;text-align:right;}
+    td{padding:7px 12px;border-bottom:1px solid #e2e8f0;}
+    tr:nth-child(even){background:#f8fafc;}
+    .kpi-row{display:flex;gap:20px;margin:16px 0;flex-wrap:wrap;}
+    .kpi{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 20px;text-align:center;}
+    .kpi-num{font-size:26px;font-weight:800;color:#1e3a8a;}
+    .kpi-lbl{font-size:11px;color:#64748b;}
+    @media print{body{padding:10px;}button{display:none;}}
+  </style></head><body>
+  <h1>📊 דוח פיזור תלמידים — הסעות הרצליה</h1>
+  <p style="color:#64748b;">הופק בתאריך: ${now}</p>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-num">${stats.total}</div><div class="kpi-lbl">סה"כ תלמידים</div></div>
+    <div class="kpi"><div class="kpi-num">${stats.by_zone.length}</div><div class="kpi-lbl">אזורי הסעה</div></div>
+    <div class="kpi"><div class="kpi-num">${stats.by_school.length}</div><div class="kpi-lbl">בתי ספר</div></div>
+    <div class="kpi"><div class="kpi-num">${Object.keys(byLine).length}</div><div class="kpi-lbl">קווי הסעה</div></div>
+  </div>
+
+  <h2>פיזור לפי קו הסעה</h2>
+  <table><thead><tr><th>קו</th><th>מספר תלמידים</th><th>אזורים</th></tr></thead><tbody>${lineRows}</tbody></table>
+
+  <h2>פיזור לפי אזור</h2>
+  <table><thead><tr><th>אזור</th><th>מספר תלמידים</th></tr></thead><tbody>${byZoneRows}</tbody></table>
+
+  <h2>פיזור לפי בית ספר</h2>
+  <table><thead><tr><th>בית ספר</th><th>מספר תלמידים</th></tr></thead><tbody>${bySchoolRows}</tbody></table>
+
+  <div style="margin-top:30px;text-align:center;">
+    <button onclick="window.print()" style="background:#1e3a8a;color:white;border:none;border-radius:8px;padding:10px 24px;font-size:14px;cursor:pointer;">🖨️ הדפסה / שמירה כ-PDF</button>
+  </div>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+}
+
 init();
 </script>
 </body>
