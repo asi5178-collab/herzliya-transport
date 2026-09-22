@@ -47,14 +47,14 @@ try {
   ];
   for (const sql of migrations) { try { _mdb.exec(sql); } catch {} }
 
-  // עדכון שמות קווי מחקר — משתמש ב-prepare+run כדי לתמוך ב-UTF-8 עברית
+  // עדכון שמות וסטטוס קווי מחקר — named params (@x) אמינים יותר ב-node:sqlite עם עברית
   const lineRenames = [
-    { name: 'קו 1 7א', ai: 1, status: 'active', code: '1A' },  // קו 1 7א
-    { name: 'קו 1 7ב', ai: 1, status: 'active', code: '1B' },  // קו 1 7ב
-    { name: 'קו 1 7ג', ai: 1, status: 'active', code: '1C' },  // קו 1 7ג
+    { name: 'קו 1 7א', ai: 1, status: 'active', code: '1A' },
+    { name: 'קו 1 7ב', ai: 1, status: 'active', code: '1B' },
+    { name: 'קו 1 7ג', ai: 1, status: 'active', code: '1C' },
   ];
-  const renameStmt = _mdb.prepare('UPDATE lines SET name=?, ai_enabled=?, status=? WHERE code=?');
-  for (const r of lineRenames) { try { renameStmt.run(r.name, r.ai, r.status, r.code); } catch {} }
+  const renameStmt = _mdb.prepare('UPDATE lines SET name=@name, ai_enabled=@ai, status=@status WHERE code=@code');
+  for (const r of lineRenames) { try { renameStmt.run({ name: r.name, ai: r.ai, status: r.status, code: r.code }); } catch (e) { console.error('Line rename error:', e.message); } }
 
   _mdb.close();
 } catch (e) { console.error('Migration error:', e.message); }
