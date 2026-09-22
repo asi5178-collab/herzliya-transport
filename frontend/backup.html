@@ -152,6 +152,38 @@
         <div id="importDetailsList"></div>
       </div>
 
+      <!-- שחזור חלקי -->
+      <div class="card" style="border:2px solid #f59e0b;">
+        <div class="card-title"><i class="bi bi-funnel-fill" style="color:#d97706;"></i> שחזור חלקי — לאחר Deploy או עדכון</div>
+        <p style="font-size:13px;color:#374151;margin-bottom:14px;">
+          בחר קובץ גיבוי וייבא <strong>רק נסיעות שבועיות + הודעות WhatsApp</strong> ללא נגיעה בקווים, תלמידים או הגדרות.
+        </p>
+
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn" onclick="document.getElementById('partialFileInput').click()"
+            style="background:#d97706;border-color:#d97706;color:white;font-size:13px;">
+            <i class="bi bi-file-earmark-json"></i> בחר קובץ גיבוי
+          </button>
+          <span id="partialFileName" style="font-size:13px;color:#64748b;">לא נבחר קובץ</span>
+        </div>
+        <input type="file" id="partialFileInput" accept=".json" style="display:none" onchange="partialFileSelected(event)">
+        <div id="partialFileInfo" style="display:none;padding:8px 12px;background:#fef9c3;border-radius:8px;font-size:12px;color:#374151;margin-bottom:12px;border:1px solid #fde047;">
+          <i class="bi bi-info-circle"></i> <span id="partialFileSummary"></span>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button id="partialImportBtn" class="btn" disabled onclick="importSelectiveData()"
+            style="background:#d97706;border-color:#d97706;color:white;font-size:13px;opacity:0.5;">
+            <i class="bi bi-upload"></i> ייבא נסיעות + WhatsApp
+          </button>
+          <button class="btn" onclick="fixLines()"
+            style="background:#7c3aed;border-color:#7c3aed;color:white;font-size:13px;">
+            <i class="bi bi-arrow-repeat"></i> תקן קווים עכשיו (1א/1ב/1ג)
+          </button>
+        </div>
+        <div id="partialResult" style="display:none;margin-top:12px;" class="alert"></div>
+      </div>
+
       <!-- הנחיות Railway Volume -->
       <div class="card">
         <div class="card-title"><i class="bi bi-database" style="color:#7c3aed;"></i> פתרון קבוע — Railway Volume</div>
@@ -334,6 +366,93 @@ async function importBackup() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-upload"></i> שחזר נתונים';
+  }
+}
+
+/* ─── שחזור חלקי ─── */
+let partialData = null;
+
+function partialFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      partialData = JSON.parse(e.target.result);
+      if (!partialData.tables) throw new Error('פורמט לא תקין');
+      const r = (partialData.tables.weekly_ridership || []).length;
+      const w = (partialData.tables.whatsapp_messages || []).length;
+      document.getElementById('partialFileName').textContent = file.name;
+      document.getElementById('partialFileSummary').textContent =
+        `${r} נסיעות שבועיות ו-${w} הודעות WhatsApp יתוספו/יעודכנו`;
+      document.getElementById('partialFileInfo').style.display = 'block';
+      const btn = document.getElementById('partialImportBtn');
+      btn.disabled = false; btn.style.opacity = '1';
+    } catch(err) {
+      alert('קובץ לא תקין: ' + err.message);
+      partialData = null;
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function importSelectiveData() {
+  if (!partialData) return;
+  const r = (partialData.tables.weekly_ridership || []).length;
+  const w = (partialData.tables.whatsapp_messages || []).length;
+  if (!confirm(`ייבוא ${r} נסיעות ו-${w} הודעות WhatsApp בלבד. קווים ושאר הנתונים לא יושפעו. להמשיך?`)) return;
+
+  const btn = document.getElementById('partialImportBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> מייבא...';
+  const res = document.getElementById('partialResult');
+  res.style.display = 'none';
+
+  try {
+    const result = await fetch('/api/backup/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+      body: JSON.stringify({
+        tables: {
+          weekly_ridership: partialData.tables.weekly_ridership || [],
+          whatsapp_messages: partialData.tables.whatsapp_messages || []
+        }
+      })
+    }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'שגיאה'); return j; });
+
+    res.style.display = 'block';
+    res.className = 'alert alert-success';
+    const imported = result.results || {};
+    res.textContent = `יובאו ${imported.weekly_ridership || 0} נסיעות ו-${imported.whatsapp_messages || 0} הודעות WhatsApp — קווים לא שונו`;
+    await loadStatus();
+  } catch(e) {
+    res.style.display = 'block';
+    res.className = 'alert alert-danger';
+    res.textContent = 'שגיאה: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-upload"></i> ייבא נסיעות + WhatsApp';
+  }
+}
+
+async function fixLines() {
+  const res = document.getElementById('partialResult');
+  try {
+    const result = await fetch('/api/lines/fix-research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+    }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'שגיאה'); return j; });
+
+    const ok = (result.results || []).filter(x => x.ok).length;
+    res.style.display = 'block';
+    res.className = 'alert alert-success';
+    res.textContent = `קווי מחקר תוקנו: ${ok}/3 קווים הוגדרו פעילים עם שמות נכונים`;
+    await loadStatus();
+  } catch(e) {
+    res.style.display = 'block';
+    res.className = 'alert alert-danger';
+    res.textContent = 'שגיאה: ' + e.message;
   }
 }
 
