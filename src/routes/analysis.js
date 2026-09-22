@@ -193,7 +193,18 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
        created_at DESC`
   ).all();
 
-  const sa = db.prepare('SELECT * FROM student_analysis WHERE week_date = ?').get(week_date);
+  // fuzzy match for student analysis (same ±6 day tolerance)
+  let sa = db.prepare('SELECT * FROM student_analysis WHERE week_date = ?').get(week_date);
+  if (!sa) {
+    sa = db.prepare(
+      `SELECT * FROM student_analysis WHERE ABS(JULIANDAY(week_date) - JULIANDAY(?)) <= 6 ORDER BY ABS(JULIANDAY(week_date) - JULIANDAY(?)) LIMIT 1`
+    ).get(week_date, week_date);
+  }
+
+  // completed tasks with notes
+  const completedTasks = db.prepare(
+    `SELECT * FROM tasks WHERE status='done' ORDER BY stakeholder, created_at DESC LIMIT 60`
+  ).all();
 
   const report = buildHTMLReport({
     week_date, week_number: analysis.week_number,
@@ -205,6 +216,7 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
     negThemes: JSON.parse(analysis.negative_themes || '[]'),
     recommendations: JSON.parse(analysis.recommendations || '[]'),
     openTasks,
+    completedTasks,
     student: sa ? {
       score: sa.satisfaction_score,
       level: sa.satisfaction_level,
@@ -212,7 +224,8 @@ router.post('/generate-report', requireRole('admin'), (req, res) => {
       source_group: sa.source_group || 'קבוצת תלמידים',
       insights: JSON.parse(sa.student_insights || '[]'),
       posThemes: JSON.parse(sa.positive_themes || '[]'),
-      negThemes: JSON.parse(sa.negative_themes || '[]')
+      negThemes: JSON.parse(sa.negative_themes || '[]'),
+      recommendations: JSON.parse(sa.recommendations || '[]')
     } : null
   });
 
@@ -230,52 +243,74 @@ function buildHTMLReport(d) {
   const priColor = { high: '#dc2626', medium: '#d97706', low: '#16a34a' };
   const stLabel  = { open: 'פתוח', in_progress: 'בביצוע' };
 
-  // קיבוץ לפי בעל עניין
-  const byStakeholder = {};
-  for (const t of d.openTasks) {
+  // קיבוץ משימות פתוחות + סגורות לפי בעל עניין
+  const allTasksByStake = {};
+  for (const t of [...(d.openTasks || []), ...(d.completedTasks || [])]) {
     const sh = t.stakeholder || 'כללי';
-    (byStakeholder[sh] = byStakeholder[sh] || []).push(t);
+    if (!allTasksByStake[sh]) allTasksByStake[sh] = { open: [], done: [] };
+    if (t.status === 'done') allTasksByStake[sh].done.push(t);
+    else allTasksByStake[sh].open.push(t);
   }
 
   const li = s => `<li style="padding:4px 0;color:#374151;">${s}</li>`;
 
   let tasksHTML = '';
-  for (const [sh, tasks] of Object.entries(byStakeholder)) {
-    const highCount = tasks.filter(t => t.priority === 'high').length;
+  for (const [sh, { open, done }] of Object.entries(allTasksByStake)) {
+    const highCount = open.filter(t => t.priority === 'high').length;
+    const pct = (open.length + done.length) ? Math.round(100 * done.length / (open.length + done.length)) : 0;
     tasksHTML += `
-      <div style="margin-bottom:20px;">
+      <div style="margin-bottom:24px;">
         <div style="background:#1e40af;color:white;padding:9px 16px;border-radius:6px 6px 0 0;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center;">
           <span>${sh}</span>
-          <span style="font-size:11px;opacity:0.85;">${tasks.length} משימות${highCount ? ' | ' + highCount + ' דחופות' : ''}</span>
-        </div>
+          <span style="font-size:11px;opacity:0.9;display:flex;gap:12px;align-items:center;">
+            <span style="background:rgba(255,255,255,0.2);padding:1px 8px;border-radius:10px;">${open.length} פתוחות</span>
+            <span style="background:rgba(134,239,172,0.3);padding:1px 8px;border-radius:10px;">${done.length} הושלמו</span>
+            <span>${pct}% ביצוע</span>
+            ${highCount ? `<span style="background:rgba(239,68,68,0.3);padding:1px 8px;border-radius:10px;">⚠ ${highCount} דחופות</span>` : ''}
+          </span>
+        </div>`;
+
+    if (open.length) {
+      tasksHTML += `
         <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-top:none;font-size:13px;">
-          <thead>
-            <tr style="background:#eff6ff;">
-              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:80px;">דחיפות</th>
-              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;">משימה</th>
-              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:90px;">קטגוריה</th>
-              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:80px;">סטטוס</th>
-              <th style="padding:8px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:100px;">יעד לסיום</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tasks.map((t, i) => `
+          <thead><tr style="background:#eff6ff;">
+            <th style="padding:7px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:75px;">דחיפות</th>
+            <th style="padding:7px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;">משימה פתוחה</th>
+            <th style="padding:7px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:85px;">קטגוריה</th>
+            <th style="padding:7px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:80px;">סטטוס</th>
+            <th style="padding:7px 12px;text-align:right;color:#475569;border-bottom:1px solid #e2e8f0;width:95px;">יעד</th>
+          </tr></thead>
+          <tbody>${open.map((t, i) => `
             <tr style="background:${i % 2 === 0 ? 'white' : '#f8fafc'};">
-              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">
-                <span style="background:${priColor[t.priority] || '#64748b'}22;color:${priColor[t.priority] || '#64748b'};padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">${priLabel[t.priority] || t.priority}</span>
+              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9;">
+                <span style="background:${priColor[t.priority] || '#64748b'}22;color:${priColor[t.priority] || '#64748b'};padding:2px 7px;border-radius:12px;font-size:11px;font-weight:600;">${priLabel[t.priority] || t.priority}</span>
               </td>
-              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">${t.title}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${t.category || ''}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${stLabel[t.status] || t.status}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${t.deadline ? new Date(t.deadline).toLocaleDateString('he-IL') : ''}</td>
+              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9;">${t.title}</td>
+              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${t.category || ''}</td>
+              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${stLabel[t.status] || t.status}</td>
+              <td style="padding:7px 12px;border-bottom:1px solid #f1f5f9;color:#64748b;">${t.deadline ? new Date(t.deadline).toLocaleDateString('he-IL') : ''}</td>
             </tr>`).join('')}
           </tbody>
-        </table>
+        </table>`;
+    }
+
+    // משימות שהושלמו עם הערת ביצוע
+    const doneWithNote = done.filter(t => t.completion_note);
+    if (doneWithNote.length) {
+      tasksHTML += `<div style="background:#f0fdf4;border:1px solid #dcfce7;border-top:none;padding:10px 16px;">
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px;">✅ בוצע:</div>
+        ${doneWithNote.map(t => `
+          <div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #dcfce7;font-size:12px;">
+            <div style="flex:1;font-weight:600;color:#166534;">${t.title}</div>
+            <div style="color:#374151;flex:2;border-right:3px solid #16a34a;padding-right:8px;">${t.completion_note}</div>
+          </div>`).join('')}
       </div>`;
+    }
+    tasksHTML += '</div>';
   }
 
   if (!tasksHTML) {
-    tasksHTML = '<div style="color:#16a34a;padding:16px;background:#f0fdf4;border-radius:8px;text-align:center;font-size:14px;">אין משימות פתוחות לטיפול</div>';
+    tasksHTML = '<div style="color:#16a34a;padding:16px;background:#f0fdf4;border-radius:8px;text-align:center;font-size:14px;">אין משימות</div>';
   }
 
   return `<div style="font-family:\'Segoe UI\',\'Arial Hebrew\',Arial,sans-serif;direction:rtl;color:#1e293b;max-width:860px;">
@@ -375,16 +410,20 @@ function buildHTMLReport(d) {
         <ul style="margin:0;padding-right:16px;font-size:12px;">${d.student.negThemes.map(t => `<li style="padding:3px 0;color:#374151;">${t}</li>`).join('')}</ul>
       </div>` : ''}
     </div>
-    ${d.student.insights?.length ? `<div>
-      <div style="font-weight:700;color:#7c3aed;font-size:12px;margin-bottom:6px;">תובנות ייחודיות לתלמידים</div>
+    ${d.student.insights?.length ? `<div style="margin-bottom:10px;">
+      <div style="font-weight:700;color:#7c3aed;font-size:12px;margin-bottom:6px;">תובנות ייחודיות</div>
       ${d.student.insights.map(ins => `<div style="display:flex;gap:8px;padding:4px 0;font-size:12px;"><span style="color:#7c3aed;flex-shrink:0;">◆</span><span style="color:#374151;">${ins}</span></div>`).join('')}
+    </div>` : ''}
+    ${d.student.recommendations?.length ? `<div>
+      <div style="font-weight:700;color:#0891b2;font-size:12px;margin-bottom:6px;">המלצות מתוך קבוצת התלמידים</div>
+      <ul style="margin:0;padding-right:16px;font-size:12px;">${d.student.recommendations.map(r => `<li style="padding:3px 0;color:#374151;">${r}</li>`).join('')}</ul>
     </div>` : ''}
   </div>` : ''}
 
   <div style="margin-bottom:24px;">
     <div style="font-weight:700;font-size:15px;margin-bottom:16px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">
-      משימות פתוחות לטיפול
-      <span style="font-size:13px;color:#64748b;font-weight:400;margin-right:8px;">${d.openTasks.length} משימות</span>
+      סטטוס משימות לפי אחריות
+      <span style="font-size:13px;color:#64748b;font-weight:400;margin-right:8px;">${(d.openTasks||[]).length} פתוחות · ${(d.completedTasks||[]).length} הושלמו</span>
     </div>
     ${tasksHTML}
   </div>

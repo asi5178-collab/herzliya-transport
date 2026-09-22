@@ -24,10 +24,6 @@ try {
     "ALTER TABLE lines ADD COLUMN school_from TEXT",
     "ALTER TABLE lines ADD COLUMN school_to TEXT",
     "ALTER TABLE tasks ADD COLUMN completion_note TEXT",
-    // תיקון כפילות: שינוי שם קווי המחקר הקיימים + מחיקת כפולים
-    "UPDATE lines SET name='קו 1 7א', ai_enabled=1 WHERE code='1A'",
-    "UPDATE lines SET name='קו 1 7ב', ai_enabled=1 WHERE code='1B'",
-    "UPDATE lines SET name='קו 1 7ג', ai_enabled=1, status='active' WHERE code='1C'",
     "DELETE FROM lines WHERE code IN ('17A','17B','17C')",
     `CREATE TABLE IF NOT EXISTS student_analysis (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +46,16 @@ try {
     )`
   ];
   for (const sql of migrations) { try { _mdb.exec(sql); } catch {} }
+
+  // עדכון שמות קווי מחקר — משתמש ב-prepare+run כדי לתמוך ב-UTF-8 עברית
+  const lineRenames = [
+    { name: 'קו 1 7א', ai: 1, status: 'active', code: '1A' },  // קו 1 7א
+    { name: 'קו 1 7ב', ai: 1, status: 'active', code: '1B' },  // קו 1 7ב
+    { name: 'קו 1 7ג', ai: 1, status: 'active', code: '1C' },  // קו 1 7ג
+  ];
+  const renameStmt = _mdb.prepare('UPDATE lines SET name=?, ai_enabled=?, status=? WHERE code=?');
+  for (const r of lineRenames) { try { renameStmt.run(r.name, r.ai, r.status, r.code); } catch {} }
+
   _mdb.close();
 } catch (e) { console.error('Migration error:', e.message); }
 
