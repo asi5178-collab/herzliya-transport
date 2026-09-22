@@ -87,19 +87,14 @@ router.post('/', requireRole('admin'), (req, res) => {
 // תיקון ישיר של קווי מחקר — status=active + שם נכון
 router.post('/fix-research', requireRole('admin'), (req, res) => {
   const db = getDb();
-  const fixes = [
-    { name: 'קו 1 7א', code: '1A' },
-    { name: 'קו 1 7ב', code: '1B' },
-    { name: 'קו 1 7ג', code: '1C' },
+  const fixSql = [
+    { code: '1A', sql: "UPDATE lines SET name='קו 1 7א', ai_enabled=1, status='active' WHERE code='1A'" },
+    { code: '1B', sql: "UPDATE lines SET name='קו 1 7ב', ai_enabled=1, status='active' WHERE code='1B'" },
+    { code: '1C', sql: "UPDATE lines SET name='קו 1 7ג', ai_enabled=1, status='active' WHERE code='1C'" },
   ];
-  const stmt = db.prepare('UPDATE lines SET name=@name, status=@status, ai_enabled=1 WHERE code=@code');
-  const results = fixes.map(f => {
-    try {
-      const r = stmt.run({ name: f.name, status: 'active', code: f.code });
-      return { code: f.code, changes: r.changes };
-    } catch (e) {
-      return { code: f.code, error: e.message };
-    }
+  const results = fixSql.map(({ code, sql }) => {
+    try { db.exec(sql); return { code, ok: true }; }
+    catch (e) { return { code, error: e.message }; }
   });
   res.json({ success: true, results });
 });
