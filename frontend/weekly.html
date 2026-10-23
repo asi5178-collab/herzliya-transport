@@ -71,6 +71,15 @@
             <input type="number" id="rCapacity" class="form-control" placeholder="50">
           </div>
 
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label class="form-label" style="margin-bottom:0;">&nbsp;</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#dc2626;cursor:pointer;white-space:nowrap;">
+              <input type="checkbox" id="rCancelled" onchange="toggleCancelled(this.checked)"
+                     style="width:16px;height:16px;accent-color:#dc2626;">
+              נסיעה בוטלה
+            </label>
+          </div>
+
           <button onclick="addRidership()" class="btn btn-success">
             <i class="bi bi-plus"></i> הוסף
           </button>
@@ -168,7 +177,7 @@ async function init() {
 
 async function loadChart() {
   const data = await API.rupTrend();
-  const lineColors = {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6'};
+  const lineColors = {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6','1D':'#f59e0b','L3':'#ef4444','L8':'#06b6d4','L9':'#ec4899'};
   const byCode = {};
   const weekNums = [];
   data.forEach(r => {
@@ -219,14 +228,16 @@ async function loadTable() {
   const data = await API.ridership(lineId ? { line_id: lineId } : {});
 
   document.getElementById('rupTable').innerHTML = data.map(r => `
-    <tr>
+    <tr style="${r.cancelled ? 'opacity:0.65;background:#fef2f2;' : ''}">
       <td><strong style="background:#1e3a8a;color:white;padding:2px 7px;border-radius:5px;font-size:12px;">W-${r.week_number||'?'}</strong></td>
       <td><span style="background:${lc(r.line_code)}25;color:${lc(r.line_code)};padding:2px 8px;border-radius:10px;font-size:12px;">${r.line_name}</span></td>
-      <td><strong>${r.actual_riders}</strong></td>
-      <td>${r.registered_students}</td>
-      <td style="font-weight:700;color:${rupColor(r.rup_percent)};">${parseFloat(r.rup_percent).toFixed(1)}%</td>
+      <td><strong>${r.cancelled ? '—' : r.actual_riders}</strong></td>
+      <td>${r.registered_students || '—'}</td>
+      <td style="font-weight:700;color:${r.cancelled ? '#dc2626' : rupColor(r.rup_percent)};">
+        ${r.cancelled ? 'בוטל' : parseFloat(r.rup_percent).toFixed(1)+'%'}
+      </td>
       <td>${r.capacity}</td>
-      <td>${rupBadge(r.rup_percent)}</td>
+      <td>${r.cancelled ? '<span class="nps-badge critical">בוטלה</span>' : rupBadge(r.rup_percent)}</td>
       <td>
         <button onclick="deleteRow(${r.id})" class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5;" title="מחק שורה זו">
           <i class="bi bi-trash"></i>
@@ -236,7 +247,7 @@ async function loadTable() {
   `).join('') || '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px;">אין נתונים</td></tr>';
 }
 
-function lc(code) { return {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6'}[code]||'#64748b'; }
+function lc(code) { return {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6','1D':'#f59e0b','L3':'#ef4444','L8':'#06b6d4','L9':'#ec4899'}[code]||'#64748b'; }
 function rupBadge(rup) {
   if (rup>=40) return '<span class="nps-badge excellent">מצוין ≥40%</span>';
   if (rup>=25) return '<span class="nps-badge good">טוב 25-39%</span>';
@@ -268,31 +279,43 @@ async function loadTargets() {
   }).join('');
 }
 
+function toggleCancelled(checked) {
+  const actualInput = document.getElementById('rActual');
+  actualInput.disabled = checked;
+  if (checked) actualInput.value = '';
+}
+
 async function addRidership() {
-  const wn      = document.getElementById('rWeekNum').value;
-  const line_id = document.getElementById('rLine').value;
-  const actual  = document.getElementById('rActual').value;
-  const reg     = document.getElementById('rRegistered').value;
-  const cap     = document.getElementById('rCapacity').value;
+  const wn        = document.getElementById('rWeekNum').value;
+  const line_id   = document.getElementById('rLine').value;
+  const cancelled = document.getElementById('rCancelled').checked;
+  const actual    = document.getElementById('rActual').value;
+  const reg       = document.getElementById('rRegistered').value;
+  const cap       = document.getElementById('rCapacity').value;
 
   if (!wn)     { showResult('יש להזין מספר שבוע', 'danger'); return; }
   if (!line_id){ showResult('יש לבחור קו', 'danger'); return; }
-  if (actual===''){ showResult('יש להזין נוסעים בפועל', 'danger'); return; }
+  if (!cancelled && actual===''){ showResult('יש להזין נוסעים בפועל', 'danger'); return; }
 
   try {
     const result = await API.post('/weekly/ridership', {
       week_number: parseInt(wn),
       line_id: parseInt(line_id),
-      actual_riders: parseInt(actual),
+      actual_riders: cancelled ? 0 : parseInt(actual),
       registered_students: reg ? parseInt(reg) : null,
-      capacity: cap ? parseInt(cap) : null
+      capacity: cap ? parseInt(cap) : null,
+      cancelled: cancelled ? 1 : 0
     });
     showResult(
-      `✅ W-${wn} נשמר | נוסעים: ${result.actual} / ${result.registered} | RUP: ${parseFloat(result.rup_percent).toFixed(1)}%`,
+      cancelled
+        ? `✅ W-${wn} — נסיעה סומנה כבוטלה`
+        : `✅ W-${wn} נשמר | נוסעים: ${result.actual} / ${result.registered} | RUP: ${parseFloat(result.rup_percent).toFixed(1)}%`,
       'success'
     );
     loadChart(); loadTable(); loadTargets();
     document.getElementById('rActual').value = '';
+    document.getElementById('rCancelled').checked = false;
+    document.getElementById('rActual').disabled = false;
   } catch (err) {
     showResult('❌ ' + err.message, 'danger');
   }

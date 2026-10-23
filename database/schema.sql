@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS weekly_ridership (
   capacity INTEGER DEFAULT 18,
   source_file TEXT,
   notes TEXT,
+  cancelled INTEGER DEFAULT 0,
   created_by INTEGER REFERENCES users(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(week_date, line_id)

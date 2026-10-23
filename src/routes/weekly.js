@@ -36,10 +36,11 @@ router.get('/ridership', (req, res) => {
 // הוספה / עדכון נתוני נסיעה — מספר שבוע מספיק
 router.post('/ridership', requireRole('admin'), (req, res) => {
   try {
-    let { week_date, week_number, line_id, actual_riders, registered_students, capacity, notes } = req.body;
+    let { week_date, week_number, line_id, actual_riders, registered_students, capacity, notes, cancelled } = req.body;
 
     if (!line_id)   return res.status(400).json({ error: 'חסר קו' });
-    if (actual_riders === undefined || actual_riders === null || actual_riders === '')
+    const isCancelled = cancelled ? 1 : 0;
+    if (!isCancelled && (actual_riders === undefined || actual_riders === null || actual_riders === ''))
                     return res.status(400).json({ error: 'חסר מספר נוסעים' });
 
     // אם אין תאריך — מחשב ממספר השבוע
@@ -49,7 +50,7 @@ router.post('/ridership', requireRole('admin'), (req, res) => {
     if (!week_date) return res.status(400).json({ error: 'חסר תאריך או מספר שבוע' });
 
     const db = getDb();
-    const actual  = parseInt(actual_riders) || 0;
+    const actual  = isCancelled ? 0 : (parseInt(actual_riders) || 0);
     const lineRow = db.prepare('SELECT * FROM lines WHERE id = ?').get(parseInt(line_id));
     if (!lineRow) return res.status(400).json({ error: `קו ${line_id} לא נמצא` });
 
@@ -63,8 +64,9 @@ router.post('/ridership', requireRole('admin'), (req, res) => {
     }
 
     const cap = parseInt(capacity) || lineRow.capacity || 18;
-    const rup = registered > 0 ? ((actual / registered) * 100).toFixed(2) : '0.00';
+    const rup = isCancelled ? '0.00' : (registered > 0 ? ((actual / registered) * 100).toFixed(2) : '0.00');
     const wNum = week_number ? parseInt(week_number) : null;
+    const saveNotes = isCancelled ? 'בוטל' : (notes || null);
 
     // UPDATE אם קיים, אחרת INSERT
     const existing = db.prepare('SELECT id FROM weekly_ridership WHERE week_date = ? AND line_id = ?')
@@ -73,17 +75,17 @@ router.post('/ridership', requireRole('admin'), (req, res) => {
     if (existing) {
       db.prepare(`UPDATE weekly_ridership
         SET actual_riders=?, registered_students=?, rup_percent=?, capacity=?,
-            week_number=?, notes=?
+            week_number=?, notes=?, cancelled=?
         WHERE week_date=? AND line_id=?`
-      ).run(actual, registered, rup, cap, wNum, notes||null, week_date, parseInt(line_id));
+      ).run(actual, registered, rup, cap, wNum, saveNotes, isCancelled, week_date, parseInt(line_id));
     } else {
       db.prepare(`INSERT INTO weekly_ridership
-        (week_date, week_number, line_id, actual_riders, registered_students, rup_percent, capacity, notes)
-        VALUES (?,?,?,?,?,?,?,?)`
-      ).run(week_date, wNum, parseInt(line_id), actual, registered, rup, cap, notes||null);
+        (week_date, week_number, line_id, actual_riders, registered_students, rup_percent, capacity, notes, cancelled)
+        VALUES (?,?,?,?,?,?,?,?,?)`
+      ).run(week_date, wNum, parseInt(line_id), actual, registered, rup, cap, saveNotes, isCancelled);
     }
 
-    res.json({ success: true, rup_percent: rup, actual, registered, week_date });
+    res.json({ success: true, rup_percent: rup, actual, registered, week_date, cancelled: isCancelled });
   } catch (err) {
     console.error('weekly POST error:', err);
     res.status(500).json({ error: err.message });

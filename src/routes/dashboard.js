@@ -17,8 +17,8 @@ router.get('/summary', (req, res) => {
              SUM(registered_students) as total_registered,
              ROUND(100.0 * SUM(actual_riders) / SUM(registered_students), 1) as total_rup
       FROM weekly_ridership
-      WHERE week_number IS NOT NULL
-      AND week_date = (SELECT MAX(week_date) FROM weekly_ridership WHERE week_number IS NOT NULL)
+      WHERE week_number IS NOT NULL AND cancelled = 0
+      AND week_date = (SELECT MAX(week_date) FROM weekly_ridership WHERE week_number IS NOT NULL AND cancelled = 0)
     `).get();
 
     const lastAnalysis = db.prepare(`
@@ -52,9 +52,9 @@ router.get('/rup-trend', (req, res) => {
     const db = getDb();
     res.json(db.prepare(`
       SELECT wr.week_date, wr.week_number, l.name as line_name, l.code,
-             wr.actual_riders, wr.registered_students, wr.rup_percent, wr.capacity
+             wr.actual_riders, wr.registered_students, wr.rup_percent, wr.capacity, wr.cancelled
       FROM weekly_ridership wr JOIN lines l ON wr.line_id = l.id
-      WHERE wr.week_number IS NOT NULL
+      WHERE wr.week_number IS NOT NULL AND wr.cancelled = 0
       ORDER BY wr.week_number ASC, l.code
     `).all());
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -67,9 +67,9 @@ router.get('/rup-total', (req, res) => {
       SELECT week_number, week_date,
              SUM(actual_riders) as total_riders,
              SUM(registered_students) as total_registered,
-             ROUND(100.0 * SUM(actual_riders) / SUM(registered_students), 2) as total_rup
+             ROUND(100.0 * SUM(actual_riders) / NULLIF(SUM(registered_students), 0), 2) as total_rup
       FROM weekly_ridership
-      WHERE week_number IS NOT NULL
+      WHERE week_number IS NOT NULL AND cancelled = 0
       GROUP BY week_number
       ORDER BY week_number ASC
     `).all());
@@ -139,17 +139,17 @@ router.get('/weekly-summary', (req, res) => {
 router.get('/research-comparison', (req, res) => {
   try {
     const db = getDb();
-    // קווי מחקר: 17A, 17B, 17C (ai_enabled=1) ו-L3, L8, L9 (ai_enabled=0)
-    const researchCodes = ['1A','1B','1C','L3','L8','L9'];
+    // קווי מחקר: 1A, 1B, 1C, 1D (ai_enabled=1) ו-L3, L8, L9 (ai_enabled=0)
+    const researchCodes = ['1A','1B','1C','1D','L3','L8','L9'];
     const placeholders = researchCodes.map(() => '?').join(',');
 
     const rows = db.prepare(`
       SELECT wr.week_number, wr.week_date, l.code, l.name as line_name, l.ai_enabled,
              wr.actual_riders, wr.registered_students,
-             ROUND(100.0 * wr.actual_riders / wr.registered_students, 1) as rup_percent
+             ROUND(100.0 * wr.actual_riders / NULLIF(wr.registered_students, 0), 1) as rup_percent
       FROM weekly_ridership wr
       JOIN lines l ON wr.line_id = l.id
-      WHERE l.code IN (${placeholders}) AND wr.week_number IS NOT NULL
+      WHERE l.code IN (${placeholders}) AND wr.week_number IS NOT NULL AND wr.cancelled = 0
       ORDER BY wr.week_number ASC, l.code
     `).all(...researchCodes);
 

@@ -73,6 +73,7 @@ function doSeed(db) {
     insertLine.run('קו 1 7א', '1A', 'קו מחקר — ניסוי עם AI — מרינה ונוף ים',   18, 'minibus', wp1A, JSON.stringify([1,2]), 'active', 1, 'regular', null, null);
     insertLine.run('קו 1 7ב', '1B', 'קו מחקר — ניסוי עם AI — הרצליה פיתוח',   18, 'minibus', wp1B, JSON.stringify([3,4]), 'active', 1, 'regular', null, null);
     insertLine.run('קו 1 7ג', '1C', 'קו מחקר — ניסוי עם AI — אזור תעשייה',    50, 'bus',     JSON.stringify([]), JSON.stringify([5]), 'active', 1, 'regular', null, null);
+    insertLine.run('קו 1 7ד', '1D', 'קו מחקר — ניסוי עם AI — אולפנת צביה',    18, 'minibus', JSON.stringify([]), JSON.stringify([]), 'active', 1, 'regular', 'אולפנת צביה', null);
 
     // קווי סקיפר 1-10 (רשת תשפ"ז)
     const skipWp = JSON.stringify([]);
@@ -108,6 +109,7 @@ function doSeed(db) {
     const insertGroup = db.prepare(`INSERT OR IGNORE INTO parent_groups (name, line_id, member_count) VALUES (?,?,?)`);
     insertGroup.run('הורי קו 1א - WhatsApp', 1, 35);
     insertGroup.run('הורי קו 1ב - WhatsApp', 2, 28);
+    insertGroup.run('הורי קו 1ד - אולפנת צביה', 4, 18);
 
     // Weekly RUP data
     const rupRows = [

@@ -91,6 +91,7 @@ router.post('/fix-research', requireRole('admin'), (req, res) => {
     { code: '1A', sql: "UPDATE lines SET name='קו 1 7א', ai_enabled=1, status='active' WHERE code='1A'" },
     { code: '1B', sql: "UPDATE lines SET name='קו 1 7ב', ai_enabled=1, status='active' WHERE code='1B'" },
     { code: '1C', sql: "UPDATE lines SET name='קו 1 7ג', ai_enabled=1, status='active' WHERE code='1C'" },
+    { code: '1D', sql: "UPDATE lines SET name='קו 1 7ד', ai_enabled=1, status='active' WHERE code='1D'" },
   ];
   const results = fixSql.map(({ code, sql }) => {
     try { db.exec(sql); return { code, ok: true }; }
