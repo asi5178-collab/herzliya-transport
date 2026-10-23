@@ -165,6 +165,23 @@ CREATE TABLE IF NOT EXISTS import_log (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- אירועי מחקר — ציר זמן למאמר אקדמי
+CREATE TABLE IF NOT EXISTS research_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_date DATE NOT NULL,
+  week_number INTEGER,
+  event_type TEXT NOT NULL DEFAULT 'milestone',
+  -- milestone | system_change | external_factor | intervention | crisis | expansion
+  title TEXT NOT NULL,
+  description TEXT,
+  lines_affected TEXT DEFAULT '[]',  -- JSON: ['1A','1B']
+  metric_before TEXT,                -- JSON: {nps:3.1, rup:4.5}
+  metric_after TEXT,                 -- JSON: {nps:4.3, rup:10.2}
+  impact_note TEXT,                  -- הערה אקדמית על ההשפעה
+  source TEXT DEFAULT 'manual',      -- manual | auto
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- דוחות שנוצרו
 CREATE TABLE IF NOT EXISTS reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

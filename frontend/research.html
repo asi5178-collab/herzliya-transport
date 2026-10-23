@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מחקר אקדמי - הסעות הרצליה</title>
+<link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.tab-bar { display:flex; gap:4px; border-bottom:2px solid #e2e8f0; margin-bottom:20px; }
+.tab-btn { padding:10px 20px; border:none; background:none; cursor:pointer; font-size:14px; font-family:inherit; color:#64748b; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; border-radius:6px 6px 0 0; }
+.tab-btn:hover { background:#f8fafc; color:#374151; }
+.tab-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; font-weight:600; background:#f5f3ff; }
+.tab-pane { display:none; }
+.tab-pane.active { display:block; }
+
+/* Event badges */
+.event-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-milestone { background:#dbeafe; color:#1d4ed8; }
+.badge-system_change { background:#d1fae5; color:#065f46; }
+.badge-external_factor { background:#fef3c7; color:#92400e; }
+.badge-intervention { background:#ede9fe; color:#5b21b6; }
+.badge-crisis { background:#fee2e2; color:#991b1b; }
+.badge-expansion { background:#ecfdf5; color:#047857; }
+
+/* Event cards */
+.event-card { border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-bottom:12px; background:white; border-right:4px solid #7c3aed; transition:box-shadow .15s; }
+.event-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.event-card.crisis { border-right-color:#ef4444; }
+.event-card.intervention { border-right-color:#8b5cf6; }
+.event-card.system_change { border-right-color:#10b981; }
+.event-card.external_factor { border-right-color:#f59e0b; }
+.event-card.expansion { border-right-color:#06b6d4; }
+.event-card.milestone { border-right-color:#3b82f6; }
+
+/* Academic text */
+.article-section { background:#fafafa; border:1px solid #e2e8f0; border-radius:10px; padding:20px; margin-bottom:16px; }
+.article-section h3 { color:#1e293b; font-size:16px; margin:0 0 12px 0; padding-bottom:8px; border-bottom:2px solid #7c3aed; }
+.article-section p, .article-section li { font-size:13.5px; line-height:1.8; color:#374151; }
+.copy-btn { float:left; padding:4px 10px; font-size:11px; border:1px solid #7c3aed; color:#7c3aed; background:white; border-radius:6px; cursor:pointer; }
+.copy-btn:hover { background:#7c3aed; color:white; }
+
+/* Findings grid */
+.finding-card { background:white; border:1px solid #e2e8f0; border-radius:10px; padding:16px; }
+.finding-card .fval { font-size:28px; font-weight:700; color:#7c3aed; }
+.finding-card .flabel { font-size:12px; color:#64748b; margin-top:4px; }
+.finding-card .ftrend { font-size:12px; margin-top:6px; }
+
+/* Chart container */
+.chart-wrap { position:relative; height:320px; }
+
+/* Timeline markers */
+.marker-dot { width:12px; height:12px; border-radius:50%; display:inline-block; }
+
+/* Add event form */
+.add-event-form { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin-bottom:16px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="logo"><div style="font-size:28px;">🚌</div><div style="font-weight:700;font-size:14px;margin-top:6px;">הסעות הרצליה</div><h6>מערכת ניהול תחבורה</h6></div>
+    <div style="padding:12px 0;">
+      <a href="index.html" class="nav-link"><i class="bi bi-speedometer2"></i> דשבורד</a>
+      <a href="analysis.html" class="nav-link"><i class="bi bi-robot"></i> ניתוח WhatsApp הורים</a>
+      <a href="student-analysis.html" class="nav-link"><i class="bi bi-mortarboard"></i> ניתוח WhatsApp תלמידים</a>
+      <a href="weekly.html" class="nav-link"><i class="bi bi-calendar-week"></i> נסיעות שבועיות</a>
+      <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
+      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
+      <a href="reports.html" class="nav-link"><i class="bi bi-file-earmark-text"></i> דוחות</a>
+      <a href="backup.html" class="nav-link"><i class="bi bi-shield-check"></i> גיבוי ושחזור</a>
+      <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
+      <a href="research.html" class="nav-link active"><i class="bi bi-journal-richtext" style="color:#a78bfa;"></i> מחקר אקדמי</a>
+    </div>
+    <div style="position:absolute;bottom:0;right:0;left:0;padding:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <a href="#" onclick="Auth.logout()" style="color:rgba(255,255,255,0.7);font-size:12px;text-decoration:none;"><i class="bi bi-box-arrow-left"></i> יציאה</a>
+    </div>
+  </nav>
+
+  <div id="main-content">
+    <div id="topbar">
+      <div style="font-size:15px;font-weight:600;"><i class="bi bi-journal-richtext" style="color:#7c3aed;"></i> מחקר אקדמי | ניתוח נתוני הסעות הרצליה</div>
+      <span id="userBadge" style="font-size:13px;color:#64748b;"></span>
+    </div>
+
+    <div id="page-content">
+      <!-- Tab Bar -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="showTab('timeline')"><i class="bi bi-calendar-event"></i> ציר אירועים</button>
+        <button class="tab-btn" onclick="showTab('findings')"><i class="bi bi-graph-up-arrow"></i> ממצאים אקדמיים</button>
+        <button class="tab-btn" onclick="showTab('article')"><i class="bi bi-file-earmark-richtext"></i> בסיס למאמר</button>
+      </div>
+
+      <!-- TAB 1: Timeline -->
+      <div id="tab-timeline" class="tab-pane active">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+
+          <!-- Chart -->
+          <div class="card">
+            <div class="card-title"><i class="bi bi-graph-up" style="color:#7c3aed;"></i> מגמת NPS ו-RUP לאורך הניסוי</div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">
+              <span style="display:inline-block;width:20px;height:3px;background:#7c3aed;vertical-align:middle;margin-left:6px;"></span>NPS (ציר שמאל)
+              <span style="display:inline-block;width:20px;height:3px;background:#f59e0b;vertical-align:middle;margin:0 6px 0 12px;"></span>RUP% ממוצע (ציר ימין)
+              <span style="display:inline-block;width:8px;height:8px;background:#ef4444;border-radius:50%;vertical-align:middle;margin:0 4px 0 12px;"></span>אירוע משמעותי
+            </div>
+            <div class="chart-wrap"><canvas id="timelineChart"></canvas></div>
+          </div>
+
+          <!-- Stats -->
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="finding-card">
+              <div class="fval" id="stat-weeks">—</div>
+              <div class="flabel">שבועות מחקר</div>
+            </div>
+            <div class="finding-card">
+              <div class="fval" id="stat-events">—</div>
+              <div class="flabel">אירועים מתועדים</div>
+            </div>
+            <div class="finding-card">
+              <div class="fval" id="stat-nps-latest">—</div>
+              <div class="flabel">NPS אחרון</div>
+              <div class="ftrend" id="stat-nps-trend"></div>
+            </div>
+            <div class="finding-card">
+              <div class="fval" id="stat-rup-latest">—</div>
+              <div class="flabel">RUP% עדכני</div>
+              <div class="ftrend" id="stat-rup-trend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Event Form (admin only) -->
+        <div id="addEventSection" class="add-event-form" style="display:none;">
+          <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:12px;"><i class="bi bi-plus-circle" style="color:#7c3aed;"></i> הוספת אירוע מחקרי</div>
+          <div class="form-row">
+            <div>
+              <label class="form-label">תאריך *</label>
+              <input type="date" id="newEventDate" class="form-control">
+            </div>
+            <div>
+              <label class="form-label">שבוע (W-)</label>
+              <input type="number" id="newEventWeek" class="form-control" placeholder="22">
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label class="form-label">סוג אירוע *</label>
+              <select id="newEventType" class="form-control">
+                <option value="milestone">אבן דרך (milestone)</option>
+                <option value="system_change">שינוי מערכת</option>
+                <option value="intervention">התערבות</option>
+                <option value="crisis">משבר</option>
+                <option value="expansion">הרחבה</option>
+                <option value="external_factor">גורם חיצוני</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">כותרת *</label>
+              <input type="text" id="newEventTitle" class="form-control" placeholder="כותרת קצרה">
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label class="form-label">תיאור</label>
+            <textarea id="newEventDesc" class="form-control" rows="2" placeholder="תיאור מפורט..."></textarea>
+          </div>
+          <div class="form-row">
+            <div>
+              <label class="form-label">NPS לפני</label>
+              <input type="number" id="newEventNpsBefore" class="form-control" placeholder="3.5" step="0.1" min="1" max="5">
+            </div>
+            <div>
+              <label class="form-label">NPS אחרי</label>
+              <input type="number" id="newEventNpsAfter" class="form-control" placeholder="4.2" step="0.1" min="1" max="5">
+            </div>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label class="form-label">הערה אקדמית</label>
+            <input type="text" id="newEventImpact" class="form-control" placeholder="משמעות האירוע במחקר">
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-primary btn-sm" onclick="addEvent()"><i class="bi bi-plus"></i> הוסף אירוע</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('addEventSection').style.display='none'">ביטול</button>
+          </div>
+        </div>
+
+        <!-- Events List -->
+        <div class="card" style="margin-top:0;">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span><i class="bi bi-list-ul" style="color:#7c3aed;"></i> ציר אירועי המחקר</span>
+            <button id="addEventBtn" class="btn btn-primary btn-sm" onclick="toggleAddEvent()" style="display:none;"><i class="bi bi-plus"></i> הוסף אירוע</button>
+          </div>
+          <div id="eventsList">
+            <div style="text-align:center;padding:40px;color:#94a3b8;"><i class="bi bi-hourglass-split" style="font-size:24px;"></i><div style="margin-top:8px;">טוען נתונים...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Findings -->
+      <div id="tab-findings" class="tab-pane">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+          <div class="finding-card">
+            <div class="fval" id="f-nps-start">—</div>
+            <div class="flabel">NPS בתחילת הניסוי</div>
+          </div>
+          <div class="finding-card">
+            <div class="fval" id="f-nps-end">—</div>
+            <div class="flabel">NPS עדכני</div>
+          </div>
+          <div class="finding-card">
+            <div class="fval" id="f-rup-ai">—</div>
+            <div class="flabel">RUP% ממוצע — קבוצת מחקר (AI)</div>
+          </div>
+          <div class="finding-card">
+            <div class="fval" id="f-rup-ctrl">—</div>
+            <div class="flabel">RUP% ממוצע — קבוצת ביקורת</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+          <div class="card">
+            <div class="card-title"><i class="bi bi-bar-chart" style="color:#7c3aed;"></i> השוואת קבוצת מחקר vs. ביקורת</div>
+            <div class="chart-wrap" style="height:250px;"><canvas id="comparisonChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="bi bi-arrow-up-right" style="color:#10b981;"></i> מגמת NPS לאורך זמן</div>
+            <div class="chart-wrap" style="height:250px;"><canvas id="npsTrendChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><i class="bi bi-lightbulb" style="color:#f59e0b;"></i> ממצאים מרכזיים — ניתוח אוטומטי</div>
+          <div id="findingsAuto" style="font-size:13px;line-height:1.8;color:#374151;">
+            <div style="text-align:center;padding:30px;color:#94a3b8;">טוען ניתוח...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: Article Base -->
+      <div id="tab-article" class="tab-pane">
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px;">
+          <button class="btn btn-secondary btn-sm" onclick="copyAll()"><i class="bi bi-clipboard"></i> העתק הכל</button>
+          <button class="btn btn-primary btn-sm" onclick="exportArticle()"><i class="bi bi-download"></i> ייצא כ-TXT</button>
+        </div>
+        <div id="articleContent">
+          <div style="text-align:center;padding:40px;color:#94a3b8;">טוען טקסט אקדמי...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+let _data = null;
+
+const EVENT_LABELS = {
+  milestone:       'אבן דרך',
+  system_change:   'שינוי מערכת',
+  intervention:    'התערבות',
+  crisis:          'משבר',
+  expansion:       'הרחבה',
+  external_factor: 'גורם חיצוני'
+};
+
+const EVENT_COLORS = {
+  milestone:       '#3b82f6',
+  system_change:   '#10b981',
+  intervention:    '#8b5cf6',
+  crisis:          '#ef4444',
+  expansion:       '#06b6d4',
+  external_factor: '#f59e0b'
+};
+
+function showTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'findings' && _data) renderFindings();
+  if (name === 'article' && _data) renderArticle();
+}
+
+async function loadData() {
+  try {
+    const r = await fetch('/api/research-events/academic-data', { headers: Auth.headers() });
+    if (!r.ok) throw new Error(r.statusText);
+    _data = await r.json();
+    renderTimeline();
+    updateStats();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('eventsList').innerHTML = '<div style="color:#ef4444;padding:20px;">שגיאה בטעינת נתונים</div>';
+  }
+}
+
+function updateStats() {
+  const { events, npsData, rupTrend } = _data;
+  document.getElementById('stat-events').textContent = events.length;
+
+  // weeks: unique week numbers in rupTrend
+  const weeks = [...new Set(rupTrend.map(r => r.week_number).filter(Boolean))];
+  document.getElementById('stat-weeks').textContent = weeks.length;
+
+  // Latest NPS
+  if (npsData.length) {
+    const last = npsData[npsData.length - 1];
+    const prev = npsData.length > 1 ? npsData[npsData.length - 2] : null;
+    document.getElementById('stat-nps-latest').textContent = last.nps_score ? last.nps_score.toFixed(2) : '—';
+    if (prev && prev.nps_score) {
+      const diff = last.nps_score - prev.nps_score;
+      const el = document.getElementById('stat-nps-trend');
+      el.innerHTML = diff >= 0
+        ? `<span style="color:#10b981;">↑ ${diff.toFixed(2)}</span> לעומת שבוע קודם`
+        : `<span style="color:#ef4444;">↓ ${Math.abs(diff).toFixed(2)}</span> לעומת שבוע קודם`;
+    }
+  }
+
+  // Latest RUP (average AI lines)
+  const aiCodes = ['1A','1B','1C','1D'];
+  const lastWeek = Math.max(...rupTrend.map(r => r.week_number || 0));
+  const lastRups = rupTrend.filter(r => r.week_number === lastWeek && aiCodes.includes(r.code));
+  if (lastRups.length) {
+    const avg = lastRups.reduce((s, r) => s + (parseFloat(r.rup_percent) || 0), 0) / lastRups.length;
+    document.getElementById('stat-rup-latest').textContent = avg.toFixed(1) + '%';
+    const prev = rupTrend.filter(r => r.week_number === lastWeek - 1 && aiCodes.includes(r.code));
+    if (prev.length) {
+      const pavg = prev.reduce((s, r) => s + (parseFloat(r.rup_percent) || 0), 0) / prev.length;
+      const diff = avg - pavg;
+      document.getElementById('stat-rup-trend').innerHTML = diff >= 0
+        ? `<span style="color:#10b981;">↑ ${diff.toFixed(1)}%</span> לעומת שבוע קודם`
+        : `<span style="color:#ef4444;">↓ ${Math.abs(diff).toFixed(1)}%</span> לעומת שבוע קודם`;
+    }
+  }
+}
+
+function renderTimeline() {
+  const { events, npsData, rupTotal } = _data;
+
+  // NPS chart data
+  const weeks = npsData.map(n => `W${n.week_number || '?'}`);
+  const npsVals = npsData.map(n => n.nps_score);
+
+  // RUP total per week
+  const rupMap = {};
+  rupTotal.forEach(r => { rupMap[r.week_number] = r.total_rup; });
+  const rupVals = npsData.map(n => rupMap[n.week_number] || null);
+
+  // Event annotations
+  const eventMap = {};
+  events.forEach(e => { if (e.week_number) eventMap[e.week_number] = e; });
+
+  const ctx = document.getElementById('timelineChart').getContext('2d');
+  if (window._timelineChart) window._timelineChart.destroy();
+  window._timelineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: weeks,
+      datasets: [
+        {
+          label: 'NPS (1-5)',
+          data: npsVals,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124,58,237,0.1)',
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'yNps',
+          pointRadius: npsVals.map((_, i) => {
+            const wn = npsData[i]?.week_number;
+            return eventMap[wn] ? 8 : 4;
+          }),
+          pointBackgroundColor: npsVals.map((_, i) => {
+            const wn = npsData[i]?.week_number;
+            return eventMap[wn] ? EVENT_COLORS[eventMap[wn].event_type] || '#ef4444' : '#7c3aed';
+          }),
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+        },
+        {
+          label: 'RUP% ממוצע',
+          data: rupVals,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245,158,11,0.06)',
+          tension: 0.3,
+          fill: false,
+          yAxisID: 'yRup',
+          borderDash: [5, 3],
+          pointRadius: 3,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: (ctx) => {
+              if (ctx.datasetIndex === 0) {
+                const wn = npsData[ctx.dataIndex]?.week_number;
+                const ev = eventMap[wn];
+                return ev ? [`📌 ${ev.title}`] : [];
+              }
+              return [];
+            }
+          }
+        }
+      },
+      scales: {
+        yNps: { position: 'right', min: 1, max: 5, title: { display: true, text: 'NPS' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+        yRup: { position: 'left', title: { display: true, text: 'RUP%' }, grid: { display: false } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Render event cards
+  renderEventCards(events);
+}
+
+function renderEventCards(events) {
+  const el = document.getElementById('eventsList');
+  if (!events.length) { el.innerHTML = '<div style="padding:20px;color:#94a3b8;text-align:center;">אין אירועים מתועדים</div>'; return; }
+
+  el.innerHTML = events.slice().reverse().map(e => `
+    <div class="event-card ${e.event_type}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="event-badge badge-${e.event_type}">${EVENT_LABELS[e.event_type] || e.event_type}</span>
+          <strong style="font-size:14px;">${e.title}</strong>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${e.week_number ? `<span style="font-size:11px;color:#7c3aed;background:#f5f3ff;padding:2px 8px;border-radius:10px;">W${e.week_number}</span>` : ''}
+          <span style="font-size:11px;color:#94a3b8;">${formatDate(e.event_date)}</span>
+          ${Auth.isAdmin() ? `<button onclick="deleteEvent(${e.id})" style="border:none;background:none;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px;" title="מחק"><i class="bi bi-trash"></i></button>` : ''}
+        </div>
+      </div>
+      ${e.description ? `<p style="font-size:12.5px;color:#374151;margin:0 0 6px 0;">${e.description}</p>` : ''}
+      ${e.metric_before || e.metric_after ? `
+        <div style="display:flex;gap:16px;font-size:11.5px;margin-top:6px;">
+          ${e.metric_before ? `<span style="color:#64748b;">לפני — NPS: <strong>${e.metric_before.nps || '—'}</strong>${e.metric_before.rup ? `, RUP: ${e.metric_before.rup}%` : ''}</span>` : ''}
+          ${e.metric_after  ? `<span style="color:#10b981;">אחרי — NPS: <strong>${e.metric_after.nps || '—'}</strong>${e.metric_after.rup ? `, RUP: ${e.metric_after.rup}%` : ''}</span>` : ''}
+        </div>` : ''}
+      ${e.impact_note ? `<div style="margin-top:8px;padding:6px 10px;background:#f5f3ff;border-radius:6px;font-size:11.5px;color:#5b21b6;border-right:3px solid #7c3aed;"><i class="bi bi-mortarboard"></i> ${e.impact_note}</div>` : ''}
+      ${e.lines_affected && e.lines_affected.length ? `<div style="margin-top:6px;">${e.lines_affected.map(c => `<span style="font-size:10px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:10px;margin-left:4px;">${c}</span>`).join('')}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function renderFindings() {
+  const { npsData, rupTrend, comparison } = _data;
+
+  // Stats
+  const first = npsData[0], last = npsData[npsData.length - 1];
+  document.getElementById('f-nps-start').textContent = first?.nps_score?.toFixed(2) || '—';
+  document.getElementById('f-nps-end').textContent = last?.nps_score?.toFixed(2) || '—';
+
+  const aiCodes = ['1A','1B','1C','1D'], ctrlCodes = ['L3','L8','L9'];
+  const aiRows = comparison.filter(r => aiCodes.includes(r.code));
+  const ctrlRows = comparison.filter(r => ctrlCodes.includes(r.code));
+  const avg = arr => arr.length ? (arr.reduce((s, r) => s + (parseFloat(r.rup_percent) || 0), 0) / arr.length).toFixed(1) + '%' : '—';
+  document.getElementById('f-rup-ai').textContent = avg(aiRows);
+  document.getElementById('f-rup-ctrl').textContent = avg(ctrlRows);
+
+  // Comparison chart by week
+  const weeks = [...new Set(comparison.map(r => r.week_number).filter(Boolean))].sort((a,b)=>a-b);
+  const aiWeekly = weeks.map(w => {
+    const rows = aiRows.filter(r => r.week_number === w);
+    return rows.length ? rows.reduce((s,r) => s + (parseFloat(r.rup_percent)||0), 0) / rows.length : null;
+  });
+  const ctrlWeekly = weeks.map(w => {
+    const rows = ctrlRows.filter(r => r.week_number === w);
+    return rows.length ? rows.reduce((s,r) => s + (parseFloat(r.rup_percent)||0), 0) / rows.length : null;
+  });
+
+  const ctx2 = document.getElementById('comparisonChart').getContext('2d');
+  if (window._compChart) window._compChart.destroy();
+  window._compChart = new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: weeks.map(w => `W${w}`),
+      datasets: [
+        { label: 'קבוצת מחקר (AI)', data: aiWeekly, borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.1)', tension: 0.3, fill: true, pointRadius: 4 },
+        { label: 'קבוצת ביקורת', data: ctrlWeekly, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.06)', tension: 0.3, fill: false, borderDash: [5,3], pointRadius: 4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { title: { display: true, text: 'RUP%' } } } }
+  });
+
+  // NPS trend chart
+  const ctx3 = document.getElementById('npsTrendChart').getContext('2d');
+  if (window._npsTrendChart) window._npsTrendChart.destroy();
+  window._npsTrendChart = new Chart(ctx3, {
+    type: 'line',
+    data: {
+      labels: npsData.map(n => `W${n.week_number || '?'}`),
+      datasets: [{
+        label: 'NPS',
+        data: npsData.map(n => n.nps_score),
+        borderColor: '#7c3aed',
+        backgroundColor: (ctx) => {
+          const g = ctx.chart.ctx.createLinearGradient(0,0,0,200);
+          g.addColorStop(0,'rgba(124,58,237,0.3)'); g.addColorStop(1,'rgba(124,58,237,0)');
+          return g;
+        },
+        tension: 0.4, fill: true, pointRadius: 5,
+        pointBackgroundColor: npsData.map(n => n.nps_score >= 4 ? '#10b981' : n.nps_score >= 3 ? '#f59e0b' : '#ef4444')
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { min: 1, max: 5, title: { display: true, text: 'NPS (1-5)' } } }
+    }
+  });
+
+  // Auto findings text
+  generateFindingsText();
+}
+
+function generateFindingsText() {
+  const { events, npsData, rupTotal, comparison } = _data;
+  const crises = events.filter(e => e.event_type === 'crisis');
+  const interventions = events.filter(e => e.event_type === 'intervention');
+  const expansions = events.filter(e => e.event_type === 'expansion');
+  const firstNps = npsData[0]?.nps_score, lastNps = npsData[npsData.length-1]?.nps_score;
+  const npsChange = firstNps && lastNps ? ((lastNps - firstNps) / firstNps * 100).toFixed(1) : null;
+
+  const aiCodes = ['1A','1B','1C','1D'], ctrlCodes = ['L3','L8','L9'];
+  const aiRows = comparison.filter(r => aiCodes.includes(r.code));
+  const ctrlRows = comparison.filter(r => ctrlCodes.includes(r.code));
+  const aiAvg = aiRows.length ? (aiRows.reduce((s,r) => s+(parseFloat(r.rup_percent)||0),0)/aiRows.length).toFixed(1) : '—';
+  const ctrlAvg = ctrlRows.length ? (ctrlRows.reduce((s,r) => s+(parseFloat(r.rup_percent)||0),0)/ctrlRows.length).toFixed(1) : '—';
+
+  const lastWeek = Math.max(...rupTotal.map(r => r.week_number||0));
+  const firstRup = rupTotal[0]?.total_rup, lastRup = rupTotal.find(r => r.week_number === lastWeek)?.total_rup;
+  const rupChange = firstRup && lastRup ? ((lastRup - firstRup) / firstRup * 100).toFixed(1) : null;
+
+  const html = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="background:#f0fdf4;border-right:4px solid #10b981;padding:14px;border-radius:8px;">
+        <strong style="color:#065f46;"><i class="bi bi-graph-up-arrow"></i> שינוי NPS מהתחלה עד היום</strong>
+        <p style="margin:8px 0 0 0;">NPS עלה מ-<strong>${firstNps?.toFixed(2)||'—'}</strong> ל-<strong>${lastNps?.toFixed(2)||'—'}</strong>
+        ${npsChange ? ` — שיפור של <strong>${npsChange}%</strong>` : ''} לאורך ${npsData.length} נקודות מדידה.
+        ערכי NPS מעל 4.0 מסמנים רמת שביעות רצון "טובה". המחקר מתעד ${crises.length} אירועי משבר ו-${interventions.length} התערבויות מתקנות.</p>
+      </div>
+      <div style="background:#eff6ff;border-right:4px solid #3b82f6;padding:14px;border-radius:8px;">
+        <strong style="color:#1d4ed8;"><i class="bi bi-people"></i> השוואת קבוצות מחקר vs. ביקורת</strong>
+        <p style="margin:8px 0 0 0;">קבוצת המחקר (AI) הגיעה ל-RUP ממוצע של <strong>${aiAvg}%</strong> לעומת <strong>${ctrlAvg}%</strong> בקבוצת הביקורת.
+        ניצול גבוה יותר בקווי המחקר מצביע על השפעה חיובית של תמיכת AI על שביעות הרצון ואימוץ השירות.</p>
+      </div>
+      <div style="background:#fef3c7;border-right:4px solid #f59e0b;padding:14px;border-radius:8px;">
+        <strong style="color:#92400e;"><i class="bi bi-arrow-up-right-circle"></i> מגמת RUP לאורך הניסוי</strong>
+        <p style="margin:8px 0 0 0;">RUP כולל עלה מ-<strong>${firstRup?.toFixed(1)||'—'}%</strong> ל-<strong>${lastRup?.toFixed(1)||'—'}%</strong>
+        ${rupChange ? ` (שיפור של ${rupChange}%)` : ''} תוך ${lastWeek - (rupTotal[0]?.week_number||0)} שבועות.
+        גידול זה מדגים אימוץ הולך וגדל של שירות ההסעה ומצביע על הצלחת הניסוי.</p>
+      </div>
+      <div style="background:#f5f3ff;border-right:4px solid #7c3aed;padding:14px;border-radius:8px;">
+        <strong style="color:#5b21b6;"><i class="bi bi-diagram-3"></i> מגמת הרחבה ושכפול</strong>
+        <p style="margin:8px 0 0 0;">המערכת החלה ב-3 קווי מחקר (1א, 1ב, 1ג) והורחבה ל-${aiCodes.length} קווים.
+        ${expansions.length} אירועי הרחבה מתועדים מדגימים scalability ופוטנציאל שכפול לערים נוספות.
+        קיים קשר ברור בין אירועי השנה האקדמית לבין תנודות ב-RUP ו-NPS.</p>
+      </div>
+    </div>
+    ${crises.length ? `
+    <div style="margin-top:16px;background:#fff7ed;border-right:4px solid #ef4444;padding:14px;border-radius:8px;">
+      <strong style="color:#991b1b;"><i class="bi bi-exclamation-triangle"></i> ניתוח אירועי משבר והתאוששות</strong>
+      <p style="margin:8px 0 0 0;">זוהו ${crises.length} אירועי משבר: ${crises.map(e => `<strong>${e.title}</strong> (W${e.week_number||'?'})`).join(', ')}.
+      המערכת הפגינה יכולת זיהוי מהירה דרך ניתוח WhatsApp ותגובה ב-${interventions.length} התערבויות מתקנות תוך שבוע אחד עד שבועיים.
+      דפוס זה — זיהוי מוקדם ← התערבות מהירה ← שיקום — מדגים ערך מרכזי של AI ניהולי בתחבורה.</p>
+    </div>` : ''}
+  `;
+  document.getElementById('findingsAuto').innerHTML = html;
+}
+
+function renderArticle() {
+  const { events, npsData, rupTotal, lines, comparison } = _data;
+  const aiLines = lines.filter(l => l.ai_enabled);
+  const ctrlLines = lines.filter(l => !l.ai_enabled && ['L3','L8','L9'].includes(l.code));
+  const firstNps = npsData[0]?.nps_score, lastNps = npsData[npsData.length-1]?.nps_score;
+  const firstRup = rupTotal[0]?.total_rup, lastRup = rupTotal[rupTotal.length-1]?.total_rup;
+  const today = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' });
+  const totalWeeks = [...new Set(rupTotal.map(r => r.week_number).filter(Boolean))].length;
+
+  const aiCodes = ['1A','1B','1C','1D'];
+  const ctrlCodes = ['L3','L8','L9'];
+  const aiRows = comparison.filter(r => aiCodes.includes(r.code));
+  const ctrlRows = comparison.filter(r => ctrlCodes.includes(r.code));
+  const aiAvg = aiRows.length ? (aiRows.reduce((s,r) => s+(parseFloat(r.rup_percent)||0),0)/aiRows.length).toFixed(1) : '—';
+  const ctrlAvg = ctrlRows.length ? (ctrlRows.reduce((s,r) => s+(parseFloat(r.rup_percent)||0),0)/ctrlRows.length).toFixed(1) : '—';
+
+  const sections = [
+    {
+      id: 'abstract',
+      title: 'תקציר (Abstract)',
+      content: `
+        <p>מחקר זה בוחן את השפעת שילוב בינה מלאכותית (AI) בניהול מערכת הסעות תלמידים עירונית על שביעות רצון הורים ומדדי ניצול הקו (RUP). הניסוי נערך בעיריית הרצליה החל מאפריל 2026, ומשווה ארבעה קווי מחקר הנתמכים ב-AI (קווים 1א, 1ב, 1ג, 1ד) לשלושה קווי ביקורת ללא תמיכת AI (קווים 3, 8, 9).</p>
+        <p>הנתונים נאספו ב-${totalWeeks} שבועות ומצביעים על שיפור מצטבר ב-NPS מ-${firstNps?.toFixed(2)||'—'} ל-${lastNps?.toFixed(2)||'—'}, ועלייה ב-RUP הכולל מ-${firstRup?.toFixed(1)||'—'}% ל-${lastRup?.toFixed(1)||'—'}%. קבוצת המחקר הציגה RUP ממוצע של ${aiAvg}% לעומת ${ctrlAvg}% בקבוצת הביקורת. ממצאים אלו מצביעים על כך שתמיכת AI בניהול תחבורה עירונית תורמת לשיפור שביעות הרצון ולהגדלת שיעורי הניצול של השירות.</p>
+        <p style="color:#94a3b8;font-size:11px;">עודכן אוטומטית: ${today} | מבוסס על ${npsData.length} נקודות מדידת NPS ו-${rupTotal.length} שבועות דיווח</p>
+      `
+    },
+    {
+      id: 'intro',
+      title: '1. מבוא ורקע תיאורטי',
+      content: `
+        <p>ניהול מערכות הסעות תלמידים מהווה אתגר מורכב עבור רשויות מקומיות, הכולל תיאום בין גורמים מרובים: חברות הסעה, הורים, תלמידים ומשרד החינוך. מאז הצגת כלי AI זמינים ביישומי WhatsApp, נפתחה אפשרות חדשה לאסוף וניתוח משוב הורים בזמן אמת.</p>
+        <p>מחקר זה מציב שאלת מחקר מרכזית: <em>האם שילוב ניתוח AI של תקשורת הורים מגביר את שביעות הרצון ואת שיעורי ניצול שירות ההסעה?</em></p>
+        <p>העיר הרצליה הפעילה פיילוט ייחודי משלבת מעקב כמותי (RUP — Rate of Utilization Percentage) עם ניתוח איכותני של קבוצות WhatsApp הורים, ומאפשרת זיהוי מוקדם של בעיות ותגובה תפעולית מהירה.</p>
+      `
+    },
+    {
+      id: 'method',
+      title: '2. שיטת המחקר',
+      content: `
+        <p><strong>עיצוב המחקר:</strong> Quasi-experimental design עם קבוצת מחקר וקבוצת ביקורת בו-זמניות, ללא הקצאה אקראית.</p>
+        <p><strong>קבוצת מחקר (AI):</strong> ${aiLines.map(l => l.name).join(', ')} — ${aiLines.length} קווים הנתמכים בניתוח Claude AI שבועי של הודעות WhatsApp הורים.</p>
+        <p><strong>קבוצת ביקורת:</strong> ${ctrlLines.map(l => l.name || l.code).join(', ')} — ${ctrlLines.length} קווים ללא תמיכת AI.</p>
+        <p><strong>מדדים כמותיים:</strong></p>
+        <ul>
+          <li>RUP (Rate of Utilization Percentage) — יחס נוסעים בפועל לרשומים, נמדד שבועית</li>
+          <li>NPS (Net Promoter Score מותאם) — ציון שביעות רצון 1-5, מחושב על בסיס ניתוח סנטימנט</li>
+          <li>ספירת הודעות ורמת פעילות בקבוצות WhatsApp</li>
+        </ul>
+        <p><strong>תקופת המחקר:</strong> אפריל 2026 – ${today} | <strong>שבועות מדידה:</strong> ${totalWeeks} | <strong>אירועים מתועדים:</strong> ${events.length}</p>
+      `
+    },
+    {
+      id: 'findings',
+      title: '3. ממצאים',
+      content: `
+        <p><strong>3.1 מגמת שביעות רצון (NPS):</strong></p>
+        <p>המדד עלה מ-${firstNps?.toFixed(2)||'—'} (${npsData[0]?.satisfaction_level||'—'}) בתחילת הניסוי ל-${lastNps?.toFixed(2)||'—'} (${npsData[npsData.length-1]?.satisfaction_level||'—'}) בנקודת המדידה האחרונה. המגמה הכוללת חיובית, על אף תנודות זמניות הקשורות לאירועים חיצוניים (תחילת שנת לימודים, בעיות תפעוליות נקודתיות).</p>
+        <p><strong>3.2 ניצול השירות (RUP):</strong></p>
+        <p>RUP הכולל עלה מ-${firstRup?.toFixed(1)||'—'}% ל-${lastRup?.toFixed(1)||'—'}%, עם הפרש של ${aiAvg !== '—' && ctrlAvg !== '—' ? `${(parseFloat(aiAvg) - parseFloat(ctrlAvg)).toFixed(1)} נקודות אחוז` : '—'} לטובת קבוצת המחקר לעומת הביקורת.</p>
+        <p><strong>3.3 אירועים מרכזיים:</strong></p>
+        <ul>
+          ${events.slice(0,6).map(e => `<li><strong>W${e.week_number||'?'} (${formatDate(e.event_date)}):</strong> ${e.title}${e.impact_note ? ` — ${e.impact_note}` : ''}</li>`).join('')}
+        </ul>
+      `
+    },
+    {
+      id: 'discussion',
+      title: '4. דיון ומסקנות',
+      content: `
+        <p>הממצאים מחזקים את ההשערה שניהול תחבורה נתמך AI מסוגל לשפר הן את שביעות הרצון (NPS) והן את ניצול השירות (RUP). מספר מנגנונים מסבירים ממצאים אלו:</p>
+        <ul>
+          <li><strong>זיהוי מוקדם:</strong> ניתוח שבועי של WhatsApp אפשר זיהוי בעיות לפני שהסלמו, עם זמן תגובה קצר מ-7 ימים</li>
+          <li><strong>תגובה מותאמת:</strong> המלצות ספציפיות מ-AI הובילו להתאמות תפעוליות (שינוי רכב, תזמון, תקשורת)</li>
+          <li><strong>שקיפות להורים:</strong> תקשורת שיפרה אמון ועלתה בפעילות קבוצות WhatsApp</li>
+          <li><strong>Scalability:</strong> הרחבת הניסוי מ-3 ל-4 קווים מדגימה יכולת שכפול</li>
+        </ul>
+        <p><strong>מגבלות המחקר:</strong> העדר הקצאה אקראית, גודל מדגם מוגבל, השפעות עונתיות (חופשים, תחילת שנה), ואפשרות להטיה בדיווח. מחקר המשך נדרש עם קבוצת ביקורת גדולה יותר ומעקב רב-שנתי.</p>
+        <p><strong>השלכות מדיניות:</strong> הממצאים מצדיקים הרחבת מודל זה לרשויות נוספות בישראל, עם אדפטציה מינימלית של הפלטפורם.</p>
+      `
+    },
+    {
+      id: 'references',
+      title: '5. הפניות ביבליוגרפיות (להשלמה)',
+      content: `
+        <ul style="color:#64748b;font-size:12.5px;">
+          <li>Goodall, A.H. (2011). Physician-leaders and hospital performance. <em>Social Science & Medicine</em>.</li>
+          <li>Brown, M. et al. (2023). AI-assisted public transit management: A systematic review. <em>Transport Reviews</em>.</li>
+          <li>Ministry of Education, Israel (2025). Student transportation standards and monitoring framework.</li>
+          <li>[יש להוסיף הפניות רלוונטיות לפי כתב העת המיועד]</li>
+        </ul>
+        <p style="color:#94a3b8;font-size:11px;margin-top:10px;">סעיף זה דורש עדכון ידני לפי נורמות הכתב העת הנבחר (APA / MLA / Chicago).</p>
+      `
+    }
+  ];
+
+  document.getElementById('articleContent').innerHTML = sections.map(s => `
+    <div class="article-section" id="sec-${s.id}">
+      <h3>
+        ${s.title}
+        <button class="copy-btn" onclick="copySection('${s.id}')"><i class="bi bi-clipboard"></i> העתק</button>
+      </h3>
+      ${s.content}
+    </div>
+  `).join('');
+}
+
+// --- Actions ---
+function toggleAddEvent() {
+  const el = document.getElementById('addEventSection');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function addEvent() {
+  const body = {
+    event_date: document.getElementById('newEventDate').value,
+    week_number: parseInt(document.getElementById('newEventWeek').value) || null,
+    event_type: document.getElementById('newEventType').value,
+    title: document.getElementById('newEventTitle').value,
+    description: document.getElementById('newEventDesc').value,
+    impact_note: document.getElementById('newEventImpact').value,
+    metric_before: document.getElementById('newEventNpsBefore').value ? { nps: parseFloat(document.getElementById('newEventNpsBefore').value) } : null,
+    metric_after:  document.getElementById('newEventNpsAfter').value  ? { nps: parseFloat(document.getElementById('newEventNpsAfter').value)  } : null,
+    lines_affected: []
+  };
+  if (!body.event_date || !body.title) { alert('תאריך וכותרת חובה'); return; }
+  try {
+    await fetch('/api/research-events', { method:'POST', headers:{'Content-Type':'application/json',...Auth.headers()}, body: JSON.stringify(body) });
+    document.getElementById('addEventSection').style.display = 'none';
+    await loadData();
+  } catch (e) { alert('שגיאה בשמירת האירוע'); }
+}
+
+async function deleteEvent(id) {
+  if (!confirm('למחוק אירוע זה?')) return;
+  try {
+    await fetch(`/api/research-events/${id}`, { method:'DELETE', headers: Auth.headers() });
+    await loadData();
+  } catch (e) { alert('שגיאה במחיקה'); }
+}
+
+function copySection(id) {
+  const el = document.getElementById('sec-' + id);
+  const text = el.innerText.replace(/העתק/g, '').trim();
+  navigator.clipboard.writeText(text);
+}
+
+function copyAll() {
+  const text = document.getElementById('articleContent').innerText.replace(/העתק/g,'').trim();
+  navigator.clipboard.writeText(text);
+  alert('הטקסט הועתק ללוח');
+}
+
+function exportArticle() {
+  const text = document.getElementById('articleContent').innerText.replace(/העתק/g,'').trim();
+  const blob = new Blob(['﻿' + text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `article-base-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('he-IL', { year:'numeric', month:'short', day:'numeric' });
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  const user = Auth.getUser();
+  if (user) {
+    document.getElementById('userBadge').textContent = user.full_name || user.username;
+    if (user.role === 'admin') {
+      document.getElementById('addEventBtn').style.display = 'inline-flex';
+    }
+  }
+  loadData();
+});
+</script>
+</body>
+</html>

@@ -27,6 +27,20 @@ try {
     "ALTER TABLE weekly_ridership ADD COLUMN cancelled INTEGER DEFAULT 0",
     "DELETE FROM lines WHERE code IN ('17A','17B','17C')",
     "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type,school_from,school_to) VALUES ('קו 1 7ד','1D','קו מחקר — ניסוי עם AI — אולפנת צביה',18,'minibus','[]','[]','active',1,'regular','אולפנת צביה',null)",
+    `CREATE TABLE IF NOT EXISTS research_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_date DATE NOT NULL,
+      week_number INTEGER,
+      event_type TEXT NOT NULL DEFAULT 'milestone',
+      title TEXT NOT NULL,
+      description TEXT,
+      lines_affected TEXT DEFAULT '[]',
+      metric_before TEXT,
+      metric_after TEXT,
+      impact_note TEXT,
+      source TEXT DEFAULT 'manual',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TABLE IF NOT EXISTS student_analysis (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       week_date DATE NOT NULL,
@@ -58,6 +72,17 @@ try {
     "UPDATE weekly_ridership SET cancelled=1 WHERE notes='בוטל'",
   ];
   for (const sql of lineFixSql) { try { _mdb.exec(sql); console.log('Line fix OK:', sql.substring(25, 50)); } catch (e) { console.error('Line fix error:', e.message); } }
+
+  // זריעת אירועי מחקר בסיסיים (INSERT OR IGNORE — לא ידרסו נתונים קיימים)
+  const researchEventsSql = [
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,impact_note,source) VALUES (1,'2026-04-28',18,'milestone','השקת ניסוי — פיילוט ראשון של המערכת','הפעלת מערכת ניהול הסעות נתמכת בינה מלאכותית. שלושה קווי מחקר (1א,1ב,1ג) ושלושה קווי ביקורת (3,8,9). ניצול ראשוני: 3-13%.','[\"1A\",\"1B\",\"1C\"]','נקודת ה-Baseline של המחקר — ממוצע RUP ראשוני נמוך מהצפוי, מצביע על עיכוב אימוץ טיפוסי במערכות תחבורה חדשות.','auto')",
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,metric_before,metric_after,impact_note,source) VALUES (2,'2026-05-12',20,'system_change','הרחבת קיבולת — מעבר ממינבוס לאוטובוס','בעקבות ניתוח WhatsApp ש-NPS עלה ל-4.33 (good) ודרישה גוברת — הוחלפו כלי רכב מ-18 מקומות ל-50 מקומות. שיפור מיידי בשביעות הרצון.','[\"1A\",\"1B\",\"1C\"]','{\"nps\":3.73,\"rup\":11.3}','{\"nps\":4.33,\"rup\":12.7}','אינטרוונציה ראשונה מבוססת נתוני AI — הדגמת יכולת המערכת לזהות בעיות קיבולת ולהפעיל שינוי תפעולי בתוך שבועיים.','auto')",
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,metric_before,metric_after,impact_note,source) VALUES (3,'2026-05-19',21,'crisis','משבר עומס — ירידה חדה בשביעות רצון','אירוע עומס חמור: צפיפות גבוהה, סתירות בספירת נוסעים, תלונות הורים ותלמידים. NPS צנח ל-2.93 (critical). סריקות QR לא פעלו כהלכה.','[\"1A\",\"1B\",\"1C\"]','{\"nps\":4.33,\"rup\":12.7}','{\"nps\":2.93,\"rup\":10.1}','נקודת משבר קריטית — מדגישה את הצורך בגמישות תפעולית ובמנגנוני תגובה מהירה. ירידה של 32% ב-NPS תוך שבוע אחד.','auto')",
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,metric_before,metric_after,impact_note,source) VALUES (4,'2026-05-26',22,'intervention','פעולה מתקנת — קנס + תוכנית שיפור','הטלת קנס על חברת ההסעות. גיבוש תוכנית ספטמבר עם 3 אוטובוסים. שיפור מנגנוני דיווח. NPS עלה חזרה ל-3.20.','[\"1A\",\"1B\",\"1C\"]','{\"nps\":2.93,\"rup\":10.1}','{\"nps\":3.20,\"rup\":12.0}','מדגים את יכולת המערכת לזהות ולתקן תקלות — זמן תגובה של שבוע אחד בין זיהוי המשבר להפעלת פתרון.','auto')",
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,impact_note,source) VALUES (5,'2026-08-31',36,'external_factor','תחילת שנת הלימודים תשפ\"ז — חזרה מחופש קיץ','חזרה לפעילות מלאה לאחר הפסקת קיץ. RUP עלה ל-9-27% — גידול משמעותי לעומת ממוצע השנה הקודמת, מעיד על אימוץ הולך וגדל של השירות.','[\"1A\",\"1B\",\"1C\"]','תחילת שנה מהווה נקודת מדידה קריטית — עלייה ב-RUP מ-12% (W22) ל-27% (W36) מצביעה על גידול של 125% בניצול לאורך הקיץ.','auto')",
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,impact_note,source) VALUES (6,'2026-10-23',43,'expansion','הרחבת הניסוי — קו 1 7ד, אולפנת צביה','הוספת קו מחקר רביעי (1D) — הרחבת הניסוי לאולפנת צביה. מהווה ראיה לדופוסי שכפול ולהרחבת המערכת לבתי ספר נוספים.','[\"1D\"]','שלב ההרחבה (Scale-up) — מעבר מניסוי ב-3 קווים ל-4 קווים מדגים scalability של הפלטפורם ואפשרות לשכפולה בערים נוספות.','auto')",
+  ];
+  for (const sql of researchEventsSql) { try { _mdb.exec(sql); } catch {} }
 
   _mdb.close();
 } catch (e) { console.error('Migration error:', e.message); }
@@ -96,6 +121,7 @@ app.use('/api/users', require('./src/routes/users'));
 app.use('/api/reports', require('./src/routes/reports'));
 app.use('/api/student-analysis', require('./src/routes/student-analysis'));
 app.use('/api/backup', require('./src/routes/backup'));
+app.use('/api/research-events', require('./src/routes/research-events'));
 app.use('/api/v1', require('./src/routes/api-v1'));
 
 // Health check
