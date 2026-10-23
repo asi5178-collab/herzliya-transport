@@ -84,15 +84,20 @@ router.post('/', requireRole('admin'), (req, res) => {
   }
 });
 
-// תיקון ישיר של קווי מחקר — status=active + שם נכון
+// תיקון ישיר של קווי מחקר — status=active + שם נכון + הוספת 1ד אם חסרה
 router.post('/fix-research', requireRole('admin'), (req, res) => {
   const db = getDb();
+  // וודא שקו 1ד קיים (אחרי שחזור גיבוי ישן שלא כלל אותה)
+  const ensureSql = [
+    "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type,school_from,school_to) VALUES ('קו 1 7ד','1D','קו מחקר — ניסוי עם AI — אולפנת צביה',18,'minibus','[]','[]','active',1,'regular','אולפנת צביה',null)",
+  ];
   const fixSql = [
     { code: '1A', sql: "UPDATE lines SET name='קו 1 7א', ai_enabled=1, status='active' WHERE code='1A'" },
     { code: '1B', sql: "UPDATE lines SET name='קו 1 7ב', ai_enabled=1, status='active' WHERE code='1B'" },
     { code: '1C', sql: "UPDATE lines SET name='קו 1 7ג', ai_enabled=1, status='active' WHERE code='1C'" },
     { code: '1D', sql: "UPDATE lines SET name='קו 1 7ד', ai_enabled=1, status='active' WHERE code='1D'" },
   ];
+  for (const sql of ensureSql) { try { db.exec(sql); } catch {} }
   const results = fixSql.map(({ code, sql }) => {
     try { db.exec(sql); return { code, ok: true }; }
     catch (e) { return { code, error: e.message }; }

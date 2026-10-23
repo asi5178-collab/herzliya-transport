@@ -209,7 +209,12 @@
         <div class="card" style="margin-top:0;">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
             <span><i class="bi bi-list-ul" style="color:#7c3aed;"></i> ציר אירועי המחקר</span>
-            <button id="addEventBtn" class="btn btn-primary btn-sm" onclick="toggleAddEvent()" style="display:none;"><i class="bi bi-plus"></i> הוסף אירוע</button>
+            <div style="display:flex;gap:8px;">
+              <button onclick="exportWord()" class="btn btn-sm" style="background:#1e3a8a;border-color:#1e3a8a;color:white;font-size:12px;">
+                <i class="bi bi-file-earmark-word"></i> דוח Word
+              </button>
+              <button id="addEventBtn" class="btn btn-primary btn-sm" onclick="toggleAddEvent()" style="display:none;"><i class="bi bi-plus"></i> הוסף אירוע</button>
+            </div>
           </div>
           <div id="eventsList">
             <div style="text-align:center;padding:40px;color:#94a3b8;"><i class="bi bi-hourglass-split" style="font-size:24px;"></i><div style="margin-top:8px;">טוען נתונים...</div></div>
@@ -267,7 +272,10 @@
       <div id="tab-article" class="tab-pane">
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px;">
           <button class="btn btn-secondary btn-sm" onclick="copyAll()"><i class="bi bi-clipboard"></i> העתק הכל</button>
-          <button class="btn btn-primary btn-sm" onclick="exportArticle()"><i class="bi bi-download"></i> ייצא כ-TXT</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportArticle()"><i class="bi bi-download"></i> ייצא כ-TXT</button>
+          <button class="btn btn-primary btn-sm" onclick="exportWord()" style="background:#1e3a8a;border-color:#1e3a8a;">
+            <i class="bi bi-file-earmark-word"></i> ייצא דוח Word
+          </button>
         </div>
         <div id="articleContent">
           <div style="text-align:center;padding:40px;color:#94a3b8;">טוען טקסט אקדמי...</div>
@@ -799,6 +807,12 @@ function exportArticle() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `article-base-${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+}
+
+function exportWord() {
+  const a = document.createElement('a');
+  a.href = '/api/research-events/export-word';
   a.click();
 }
 
