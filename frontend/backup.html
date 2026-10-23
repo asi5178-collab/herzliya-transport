@@ -180,7 +180,7 @@
           </button>
           <button class="btn" onclick="fixLines()"
             style="background:#7c3aed;border-color:#7c3aed;color:white;font-size:13px;">
-            <i class="bi bi-arrow-repeat"></i> תקן קווים עכשיו (1א/1ב/1ג)
+            <i class="bi bi-arrow-repeat"></i> תקן קווים עכשיו (1א/1ב/1ג/1ד)
           </button>
         </div>
         <div id="partialResult" style="display:none;margin-top:12px;" class="alert"></div>
@@ -359,6 +359,8 @@ async function importBackup() {
           </span>
         </div>`).join('');
 
+    // תיקון אוטומטי של קווי מחקר לאחר שחזור
+    await fixLines(true);
     await loadStatus();
   } catch(e) {
     const res = document.getElementById('importResult');
@@ -438,7 +440,7 @@ async function importSelectiveData() {
   }
 }
 
-async function fixLines() {
+async function fixLines(silent = false) {
   const res = document.getElementById('partialResult');
   try {
     const result = await fetch('/api/lines/fix-research', {
@@ -447,9 +449,11 @@ async function fixLines() {
     }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'שגיאה'); return j; });
 
     const ok = (result.results || []).filter(x => x.ok).length;
-    res.style.display = 'block';
-    res.className = 'alert alert-success';
-    res.textContent = `קווי מחקר תוקנו: ${ok}/3 קווים הוגדרו פעילים עם שמות נכונים`;
+    if (!silent) {
+      res.style.display = 'block';
+      res.className = 'alert alert-success';
+      res.textContent = `קווי מחקר תוקנו: ${ok}/4 קווים הוגדרו פעילים עם שמות נכונים (1א/1ב/1ג/1ד)`;
+    }
     await loadStatus();
   } catch(e) {
     res.style.display = 'block';
