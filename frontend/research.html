@@ -347,13 +347,21 @@ function updateStats() {
   if (npsData.length) {
     const last = npsData[npsData.length - 1];
     const prev = npsData.length > 1 ? npsData[npsData.length - 2] : null;
-    document.getElementById('stat-nps-latest').textContent = last.nps_score ? last.nps_score.toFixed(2) : '—';
+    const npsColor = !last.nps_score ? '#64748b'
+      : last.nps_score < 2.5 ? '#dc2626'
+      : last.nps_score < 3.5 ? '#ea580c'
+      : last.nps_score < 4.0 ? '#2563eb' : '#10b981';
+    const npsEl = document.getElementById('stat-nps-latest');
+    npsEl.textContent = last.nps_score ? last.nps_score.toFixed(2) : '—';
+    npsEl.style.color = npsColor;
     if (prev && prev.nps_score) {
       const diff = last.nps_score - prev.nps_score;
       const el = document.getElementById('stat-nps-trend');
-      el.innerHTML = diff >= 0
-        ? `<span style="color:#10b981;">↑ ${diff.toFixed(2)}</span> לעומת שבוע קודם`
-        : `<span style="color:#ef4444;">↓ ${Math.abs(diff).toFixed(2)}</span> לעומת שבוע קודם`;
+      el.innerHTML = diff >= 0.1
+        ? `<span style="color:#10b981;font-weight:600;">↑ +${diff.toFixed(2)}</span> לעומת שבוע קודם`
+        : diff <= -0.1
+        ? `<span style="color:#dc2626;font-weight:700;">↓ −${Math.abs(diff).toFixed(2)} ירידה!</span> לעומת שבוע קודם`
+        : `<span style="color:#94a3b8;">→ יציב</span> לעומת שבוע קודם`;
     }
   }
 
@@ -410,9 +418,16 @@ function renderTimeline() {
             const wn = npsData[i]?.week_number;
             return eventMap[wn] ? 8 : 4;
           }),
-          pointBackgroundColor: npsVals.map((_, i) => {
+          pointBackgroundColor: npsVals.map((v, i) => {
             const wn = npsData[i]?.week_number;
-            return eventMap[wn] ? EVENT_COLORS[eventMap[wn].event_type] || '#ef4444' : '#7c3aed';
+            if (eventMap[wn]) return EVENT_COLORS[eventMap[wn].event_type] || '#ef4444';
+            // ירידה גדולה לעומת שבוע קודם — אדום
+            const prev = i > 0 ? npsVals[i - 1] : null;
+            if (prev != null && v != null && (v - prev) < -0.3) return '#ef4444';
+            // NPS נמוך — כתום/אדום
+            if (v != null && v < 2.5) return '#dc2626';
+            if (v != null && v >= 4)  return '#10b981';
+            return '#7c3aed';
           }),
           pointBorderColor: '#fff',
           pointBorderWidth: 2,
@@ -545,7 +560,19 @@ function renderFindings() {
           return g;
         },
         tension: 0.4, fill: true, pointRadius: 5,
-        pointBackgroundColor: npsData.map(n => n.nps_score >= 4 ? '#10b981' : n.nps_score >= 3 ? '#f59e0b' : '#ef4444')
+        pointBackgroundColor: npsData.map((n, i) => {
+          const prev = i > 0 ? npsData[i-1]?.nps_score : null;
+          const drop = prev != null && (n.nps_score - prev) < -0.3;
+          if (drop) return '#ef4444';           // ירידה — אדום בולט
+          if (n.nps_score >= 4)  return '#10b981';  // גבוה — ירוק
+          if (n.nps_score >= 3)  return '#f59e0b';  // בינוני
+          return '#dc2626';                     // נמוך — אדום
+        }),
+        pointRadius: npsData.map((n, i) => {
+          const prev = i > 0 ? npsData[i-1]?.nps_score : null;
+          const drop = prev != null && (n.nps_score - prev) < -0.3;
+          return drop ? 8 : 5;  // נקודת ירידה — גדולה יותר
+        }),
       }]
     },
     options: {

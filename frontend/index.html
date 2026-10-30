@@ -340,21 +340,40 @@ async function loadDashboard() {
     document.getElementById('tasksList').innerHTML = tasksHtml || '<div style="color:#94a3b8;text-align:center;padding:20px;">אין משימות פתוחות</div>';
 
     // Weekly table — מסנן שבועות ללא NPS ומציג רק שבועות עם נתונים מלאים
-    const tblHtml = (weekly || [])
-      .filter(w => w.week_number)
-      .slice(0, 8)
-      .map(w => `
+    const weeklySorted = (weekly || []).filter(w => w.week_number).slice(0, 8);
+    const tblHtml = weeklySorted.map((w, idx) => {
+      // מגמת NPS לעומת שבוע קודם (הרשומה הבאה — DESC)
+      const prevNps = weeklySorted[idx + 1]?.nps_score;
+      let npsTrend = '';
+      if (w.nps_score != null && prevNps != null) {
+        const delta = w.nps_score - prevNps;
+        if (delta > 0.1)       npsTrend = `<span style="color:#16a34a;font-size:11px;font-weight:700;"> ↑${delta.toFixed(1)}</span>`;
+        else if (delta < -0.1) npsTrend = `<span style="color:#dc2626;font-size:11px;font-weight:700;"> ↓${Math.abs(delta).toFixed(1)}</span>`;
+        else                   npsTrend = `<span style="color:#94a3b8;font-size:11px;"> →</span>`;
+      }
+      // צבע NPS לפי ערך: <2.5=אדום, <3=כתום, <4=כחול, ≥4=ירוק
+      const npsColor = !w.nps_score ? '#94a3b8'
+        : w.nps_score < 2.5 ? '#dc2626'
+        : w.nps_score < 3.0 ? '#ea580c'
+        : w.nps_score < 4.0 ? '#2563eb'
+        : '#16a34a';
+      // רמה מחושבת לפי ציון בפועל (לא תלוי ב-Claude)
+      const computedLevel = !w.nps_score ? '' : w.nps_score < 2.5 ? 'critical' : w.nps_score < 3.0 ? 'critical' : w.nps_score < 4.0 ? 'developing' : 'good';
+      const npsCell = w.nps_score
+        ? `<strong style="color:${npsColor};font-size:14px;">${w.nps_score.toFixed(2)}</strong>${npsTrend}`
+        : (w.message_count === 0 ? '<span style="font-size:11px;color:#f59e0b;">אין הודעות</span>' : '<span style="color:#94a3b8;font-size:11px;">ממתין</span>');
+      return `
       <tr>
         <td><strong style="background:#1e3a8a;color:white;padding:2px 7px;border-radius:5px;font-size:12px;">W-${w.week_number}</strong></td>
         <td>${formatDate(w.week_date)}</td>
         <td>${w.total_riders || 0}</td>
         <td style="color:#64748b;">${w.total_registered || '—'}</td>
         <td style="color:${rupColor(w.avg_rup)};font-weight:600;">${parseFloat(w.avg_rup||0).toFixed(1)}%</td>
-        <td>${w.nps_score ? w.nps_score.toFixed(2) : (w.message_count === 0 ? '<span style="font-size:11px;color:#f59e0b;">אין הודעות</span>' : '<span style="color:#94a3b8;font-size:11px;">ממתין</span>')}</td>
-        <td>${w.satisfaction_level ? `<span class="nps-badge ${w.satisfaction_level}">${satisfactionLabel(w.satisfaction_level)}</span>` : ''}</td>
+        <td>${npsCell}</td>
+        <td>${computedLevel ? `<span class="nps-badge ${computedLevel}">${satisfactionLabel(computedLevel)}</span>` : ''}</td>
         <td style="color:${w.message_count===0?'#f59e0b':'#374151'};">${w.message_count != null ? w.message_count : ''}</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
     document.getElementById('weeklyTable').innerHTML = tblHtml || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">אין נתונים עדיין</td></tr>';
 
   } catch (err) {
