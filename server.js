@@ -25,6 +25,7 @@ try {
     "ALTER TABLE lines ADD COLUMN school_to TEXT",
     "ALTER TABLE tasks ADD COLUMN completion_note TEXT",
     "ALTER TABLE weekly_ridership ADD COLUMN cancelled INTEGER DEFAULT 0",
+    "ALTER TABLE lines ADD COLUMN default_registered INTEGER DEFAULT 0",
     "DELETE FROM lines WHERE code IN ('17A','17B','17C')",
     "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type,school_from,school_to) VALUES ('קו 1 7ד','1D','קו מחקר — ניסוי עם AI — אולפנת צביה',18,'minibus','[]','[]','active',1,'regular','אולפנת צביה',null)",
     `CREATE TABLE IF NOT EXISTS research_events (
@@ -69,6 +70,13 @@ try {
     "UPDATE lines SET name='קו 1 7ב', ai_enabled=1, status='active' WHERE code='1B'",
     "UPDATE lines SET name='קו 1 7ג', ai_enabled=1, status='active' WHERE code='1C'",
     "UPDATE lines SET name='קו 1 7ד', ai_enabled=1, status='active' WHERE code='1D'",
+    "UPDATE lines SET default_registered=373 WHERE code='1A'",
+    "UPDATE lines SET default_registered=197 WHERE code='1B'",
+    "UPDATE lines SET default_registered=200 WHERE code='1C'",
+    "UPDATE lines SET default_registered=50 WHERE code='1D'",
+    "UPDATE lines SET default_registered=40 WHERE code='L3'",
+    "UPDATE lines SET default_registered=25 WHERE code='L8'",
+    "UPDATE lines SET default_registered=50 WHERE code='L9'",
     "UPDATE weekly_ridership SET cancelled=1 WHERE notes='בוטל'",
   ];
   for (const sql of lineFixSql) { try { _mdb.exec(sql); console.log('Line fix OK:', sql.substring(25, 50)); } catch (e) { console.error('Line fix error:', e.message); } }

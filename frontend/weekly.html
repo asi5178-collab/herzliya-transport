@@ -97,6 +97,22 @@
         <div id="addResult" style="display:none;margin-top:12px;" class="alert"></div>
       </div>
 
+      <!-- ברירות מחדל לרשומים -->
+      <div class="card" style="padding-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleDefaults()">
+          <div class="card-title" style="margin-bottom:0;"><i class="bi bi-people-fill" style="color:#7c3aed;"></i> ברירת מחדל — רשומים לפי קו</div>
+          <i class="bi bi-chevron-down" id="defaultsChevron" style="color:#64748b;font-size:13px;"></i>
+        </div>
+        <div id="defaultsSection" style="display:none;margin-top:14px;">
+          <div style="font-size:12px;color:#64748b;margin-bottom:10px;">ערכים אלה ממולאים אוטומטית בעת בחירת קו. שנה ולחץ שמור.</div>
+          <div id="defaultsTable" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;"></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+            <span id="defaultsSaveMsg" style="font-size:12px;color:#16a34a;display:none;align-self:center;">✅ נשמר</span>
+            <button onclick="saveDefaults()" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> שמור ברירות מחדל</button>
+          </div>
+        </div>
+      </div>
+
       <!-- גרף RUP -->
       <div class="card">
         <div class="card-title"><i class="bi bi-graph-up"></i> גרף RUP לפי שבוע</div>
@@ -204,8 +220,48 @@ async function init() {
     document.getElementById('lineFilter').appendChild(new Option(l.name, l.id));
   });
   try { lastRegistered = await API.get('/weekly/ridership/last-registered'); } catch {}
+  renderDefaultsTable();
   await Promise.all([loadChart(), loadTable()]);
   loadTargets();
+}
+
+function toggleDefaults() {
+  const sec = document.getElementById('defaultsSection');
+  const chev = document.getElementById('defaultsChevron');
+  const open = sec.style.display !== 'none';
+  sec.style.display = open ? 'none' : 'block';
+  chev.className = open ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+}
+
+function renderDefaultsTable() {
+  const researchCodes = ['1A','1B','1C','1D','L3','L8','L9'];
+  const lines = allLines.filter(l => researchCodes.includes(l.code));
+  document.getElementById('defaultsTable').innerHTML = lines.map(l => {
+    const info = lastRegistered[l.id] || {};
+    return `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;">
+        <div style="font-size:11px;color:#64748b;margin-bottom:4px;">${l.name} (${l.code})</div>
+        <input type="number" id="def_${l.id}" value="${info.default_registered || 0}" min="0"
+               style="width:100%;padding:5px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;">
+      </div>`;
+  }).join('');
+}
+
+async function saveDefaults() {
+  const researchCodes = ['1A','1B','1C','1D','L3','L8','L9'];
+  const lines = allLines.filter(l => researchCodes.includes(l.code));
+  const defaults = {};
+  lines.forEach(l => {
+    const v = document.getElementById('def_' + l.id)?.value;
+    if (v !== undefined) defaults[l.id] = parseInt(v) || 0;
+  });
+  try {
+    await API.put('/weekly/line-defaults', { defaults });
+    lastRegistered = await API.get('/weekly/ridership/last-registered');
+    const msg = document.getElementById('defaultsSaveMsg');
+    msg.style.display = 'inline';
+    setTimeout(() => msg.style.display = 'none', 3000);
+  } catch (err) { alert('שגיאה: ' + err.message); }
 }
 
 function autoFillLine(lineId) {

@@ -52,6 +52,7 @@
 
 /* Timeline markers */
 .marker-dot { width:12px; height:12px; border-radius:50%; display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
 
 /* Add event form */
 .add-event-form { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:16px; margin-bottom:16px; }
@@ -93,10 +94,15 @@
 
     <div id="page-content">
       <!-- Tab Bar -->
-      <div class="tab-bar">
-        <button class="tab-btn active" onclick="showTab('timeline')"><i class="bi bi-calendar-event"></i> ציר אירועים</button>
-        <button class="tab-btn" onclick="showTab('findings')"><i class="bi bi-graph-up-arrow"></i> ממצאים אקדמיים</button>
-        <button class="tab-btn" onclick="showTab('article')"><i class="bi bi-file-earmark-richtext"></i> בסיס למאמר</button>
+      <div class="tab-bar" style="justify-content:space-between;align-items:center;">
+        <div style="display:flex;gap:4px;">
+          <button class="tab-btn active" onclick="showTab('timeline')"><i class="bi bi-calendar-event"></i> ציר אירועים</button>
+          <button class="tab-btn" onclick="showTab('findings')"><i class="bi bi-graph-up-arrow"></i> ממצאים אקדמיים</button>
+          <button class="tab-btn" onclick="showTab('article')"><i class="bi bi-file-earmark-richtext"></i> בסיס למאמר</button>
+        </div>
+        <button onclick="refreshAll()" id="refreshBtn" class="btn btn-sm" style="background:#7c3aed;color:white;border-color:#7c3aed;font-size:12px;white-space:nowrap;">
+          <i class="bi bi-arrow-clockwise"></i> עדכן ממצאים ומאמר
+        </button>
       </div>
 
       <!-- TAB 1: Timeline -->
@@ -814,6 +820,25 @@ function exportWord() {
   const a = document.createElement('a');
   a.href = '/api/research-events/export-word';
   a.click();
+}
+
+async function refreshAll() {
+  const btn = document.getElementById('refreshBtn');
+  btn.innerHTML = '<i class="bi bi-arrow-clockwise" style="animation:spin .8s linear infinite"></i> מעדכן...';
+  btn.disabled = true;
+  try {
+    await loadData();
+    // Re-render the currently active tab
+    const activeTab = document.querySelector('.tab-pane.active')?.id?.replace('tab-','');
+    if (activeTab === 'findings' && _data) renderFindings();
+    if (activeTab === 'article' && _data) renderArticle();
+  } finally {
+    btn.innerHTML = '<i class="bi bi-check-circle"></i> עודכן!';
+    setTimeout(() => {
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> עדכן ממצאים ומאמר';
+      btn.disabled = false;
+    }, 2000);
+  }
 }
 
 function formatDate(d) {

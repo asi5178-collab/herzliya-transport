@@ -121,7 +121,7 @@ router.get('/open-tasks', (req, res) => {
 router.get('/weekly-summary', (req, res) => {
   try {
     const db = getDb();
-    // מסנן רק 7 קווי המחקר: 1A-1D (AI) + L3,L8,L9 (ביקורת)
+    // מסנן רק 4 קווי AI (1A-1D) — קווי ביקורת לא נכללים בסיכום הנוסעים/פוטנציאל
     res.json(db.prepare(`
       SELECT wr.week_number, wr.week_date,
              SUM(wr.actual_riders)       as total_riders,
@@ -133,7 +133,7 @@ router.get('/weekly-summary', (req, res) => {
       LEFT JOIN weekly_analysis wa ON wr.week_number = wa.week_number
       WHERE wr.week_number IS NOT NULL
         AND wr.cancelled = 0
-        AND l.code IN ('1A','1B','1C','1D','L3','L8','L9')
+        AND l.code IN ('1A','1B','1C','1D')
       GROUP BY wr.week_number
       ORDER BY wr.week_number DESC
     `).all());

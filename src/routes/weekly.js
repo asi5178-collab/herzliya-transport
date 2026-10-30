@@ -110,20 +110,44 @@ router.put('/ridership/:id', requireRole('admin'), (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// קבלת הפוטנציאל (registered_students) האחרון לפי קו — לאוטומציה בטופס
+// קבלת הפוטנציאל (registered_students) האחרון לפי קו — נופל חזרה ל-default_registered
 router.get('/ridership/last-registered', (req, res) => {
   try {
     const db = getDb();
-    const rows = db.prepare(`
+    // כל הקווים הפעילים עם ברירת מחדל + ערך אחרון מ-weekly_ridership
+    const lines = db.prepare(`SELECT id, code, default_registered, capacity FROM lines WHERE status='active'`).all();
+    const recent = db.prepare(`
       SELECT line_id, registered_students, capacity
       FROM weekly_ridership
       WHERE registered_students > 0
       GROUP BY line_id
       HAVING MAX(week_number)
     `).all();
+    const recentMap = {};
+    recent.forEach(r => { recentMap[r.line_id] = { registered: r.registered_students, capacity: r.capacity }; });
     const result = {};
-    rows.forEach(r => { result[r.line_id] = { registered: r.registered_students, capacity: r.capacity }; });
+    lines.forEach(l => {
+      const hist = recentMap[l.id];
+      result[l.id] = {
+        registered: hist?.registered || l.default_registered || 0,
+        capacity: hist?.capacity || l.capacity || 18,
+        default_registered: l.default_registered || 0,
+        code: l.code
+      };
+    });
     res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// עדכון ברירות מחדל לרשומים לפי קו
+router.put('/line-defaults', requireRole('admin'), (req, res) => {
+  try {
+    const db = getDb();
+    const { defaults } = req.body; // { "lineId": registered, ... }
+    for (const [lineId, registered] of Object.entries(defaults)) {
+      db.prepare('UPDATE lines SET default_registered=? WHERE id=?').run(parseInt(registered) || 0, parseInt(lineId));
+    }
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
