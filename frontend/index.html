@@ -128,7 +128,7 @@
           <div class="card-title" style="margin-bottom:0;">
             <i class="bi bi-bar-chart-line" style="color:#7c3aed;"></i> מחקר: השוואת RUP — קבוצת ניסוי (AI) מול קבוצת ביקורת
           </div>
-          <div style="font-size:11px;color:#94a3b8;">קו 1 7א, 1 7ב, 1 7ג (AI) · קו 3, 8, 9 (ביקורת)</div>
+          <div style="font-size:11px;color:#94a3b8;">קו 1 7א, 1 7ב, 1 7ג, <strong>1 7ד</strong> (AI) · קו 3, 8, 9 (ביקורת)</div>
         </div>
         <div id="researchMsg" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:13px;">אין עדיין נתוני שימוש בקווי המחקר</div>
         <div class="chart-wrapper" style="height:220px;"><canvas id="researchChart"></canvas></div>
@@ -145,7 +145,7 @@
           <table>
             <thead>
               <tr>
-                <th>שבוע</th><th>תאריך</th><th>נוסעים</th>
+                <th>שבוע</th><th>תאריך</th><th>נוסעים</th><th>פוטנציאל</th>
                 <th>RUP%</th><th>NPS</th><th>רמה</th><th>הודעות</th>
               </tr>
             </thead>
@@ -301,7 +301,7 @@ async function loadDashboard() {
         data: {
           labels: resWeeks,
           datasets: [{
-            label: 'קבוצת ניסוי — AI (קו 1 7א, 1 7ב, 1 7ג) ממוצע RUP%',
+            label: 'קבוצת ניסוי — AI (קו 1 7א, 1 7ב, 1 7ג, 1 7ד) ממוצע RUP%',
             data: researchData.map(w => w.avg_rup_ai),
             borderColor: '#7c3aed', backgroundColor: '#7c3aed20',
             tension: 0.4, fill: true, pointRadius: 6, borderWidth: 2.5, spanGaps: true
@@ -348,10 +348,11 @@ async function loadDashboard() {
         <td><strong style="background:#1e3a8a;color:white;padding:2px 7px;border-radius:5px;font-size:12px;">W-${w.week_number}</strong></td>
         <td>${formatDate(w.week_date)}</td>
         <td>${w.total_riders || 0}</td>
+        <td style="color:#64748b;">${w.total_registered || '—'}</td>
         <td style="color:${rupColor(w.avg_rup)};font-weight:600;">${parseFloat(w.avg_rup||0).toFixed(1)}%</td>
-        <td>${w.nps_score ? w.nps_score.toFixed(2) : '<span style="color:#e2e8f0;font-size:11px;">ממתין לניתוח</span>'}</td>
+        <td>${w.nps_score ? w.nps_score.toFixed(2) : (w.message_count === 0 ? '<span style="font-size:11px;color:#f59e0b;">אין הודעות</span>' : '<span style="color:#94a3b8;font-size:11px;">ממתין</span>')}</td>
         <td>${w.satisfaction_level ? `<span class="nps-badge ${w.satisfaction_level}">${satisfactionLabel(w.satisfaction_level)}</span>` : ''}</td>
-        <td>${w.message_count || ''}</td>
+        <td style="color:${w.message_count===0?'#f59e0b':'#374151'};">${w.message_count != null ? w.message_count : ''}</td>
       </tr>
     `).join('');
     document.getElementById('weeklyTable').innerHTML = tblHtml || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">אין נתונים עדיין</td></tr>';

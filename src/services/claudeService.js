@@ -80,6 +80,31 @@ async function analyzeRawText(text, weekDate, weekNumber, contextData = {}) {
 
   const lines = text.split('\n').filter(l => l.trim().length > 2).length;
 
+  // שבוע ללא הודעות — החזר ציון ניטרלי ללא קריאה ל-Claude
+  const noMsgPatterns = /^(אין הודעות?|no messages?|אין|nothing|ריק|empty)$/i;
+  if (noMsgPatterns.test(text.trim()) || lines < 2) {
+    const deadlineShort = getDeadline(weekDate, 7);
+    return {
+      nps_score: 3.0,
+      satisfaction_level: 'developing',
+      message_count: 0,
+      summary: `שבוע W-${weekNumber||'?'} — לא נמצאו הודעות הורים לניתוח. ציון NPS ניטרלי (3.0) נרשם אוטומטית; היעדר פידבק יכול להצביע על שביעות רצון סבירה, אדישות, או ערוץ תקשורת לא פעיל.`,
+      positive_themes: ['אין נתונים לניתוח שבוע זה'],
+      negative_themes: ['לא התקבל פידבק מהורים — קושי לאמוד שביעות רצון'],
+      recommendations: ['לבדוק זמינות ערוץ WhatsApp', 'לשקול שליחת שאלון קצר להורים'],
+      tasks: [{
+        title: 'בדיקת ערוץ תקשורת WhatsApp',
+        description: 'לא התקבלו הודעות הורים שבוע זה — לבדוק שהקבוצה פעילה',
+        priority: 'low',
+        deadline: deadlineShort,
+        stakeholder: 'ערן ראובני',
+        category: 'שיפור'
+      }],
+      sentiment_breakdown: { positive_percent: 0, negative_percent: 0, neutral_percent: 100 },
+      key_quotes: ['אין הודעות לשבוע זה']
+    };
+  }
+
   const systemPrompt = `אתה מנתח מומחה לשביעות רצון לקוחות בתחבורה עירונית - עיריית הרצליה.
 אתה מקבל טקסט גולמי (ייתכן שהוא שיחת WhatsApp, ייתכן שהוא פשוט טקסט - לא משנה הפורמט).
 תפקידך: לנתח את תוכן ההודעות ולתת:

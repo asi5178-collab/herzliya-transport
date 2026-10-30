@@ -121,14 +121,19 @@ router.get('/open-tasks', (req, res) => {
 router.get('/weekly-summary', (req, res) => {
   try {
     const db = getDb();
+    // מסנן רק 7 קווי המחקר: 1A-1D (AI) + L3,L8,L9 (ביקורת)
     res.json(db.prepare(`
       SELECT wr.week_number, wr.week_date,
-             SUM(wr.actual_riders) as total_riders,
-             ROUND(100.0 * SUM(wr.actual_riders) / SUM(wr.registered_students), 1) as avg_rup,
+             SUM(wr.actual_riders)       as total_riders,
+             SUM(wr.registered_students) as total_registered,
+             ROUND(100.0 * SUM(wr.actual_riders) / NULLIF(SUM(wr.registered_students),0), 1) as avg_rup,
              wa.nps_score, wa.satisfaction_level, wa.message_count
       FROM weekly_ridership wr
+      JOIN lines l ON wr.line_id = l.id
       LEFT JOIN weekly_analysis wa ON wr.week_number = wa.week_number
       WHERE wr.week_number IS NOT NULL
+        AND wr.cancelled = 0
+        AND l.code IN ('1A','1B','1C','1D','L3','L8','L9')
       GROUP BY wr.week_number
       ORDER BY wr.week_number DESC
     `).all());

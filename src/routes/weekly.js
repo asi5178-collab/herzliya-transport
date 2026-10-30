@@ -92,6 +92,41 @@ router.post('/ridership', requireRole('admin'), (req, res) => {
   }
 });
 
+// עדכון שורה בודדת (עריכה)
+router.put('/ridership/:id', requireRole('admin'), (req, res) => {
+  try {
+    const db = getDb();
+    let { actual_riders, registered_students, capacity, notes, cancelled } = req.body;
+    const isCancelled = cancelled ? 1 : 0;
+    const actual = isCancelled ? 0 : parseInt(actual_riders) || 0;
+    const registered = parseInt(registered_students) || 0;
+    const cap = parseInt(capacity) || 18;
+    const rup = registered > 0 ? ((actual / registered) * 100).toFixed(2) : '0.00';
+    const saveNotes = isCancelled ? 'בוטל' : (notes || null);
+    db.prepare(`UPDATE weekly_ridership
+      SET actual_riders=?, registered_students=?, rup_percent=?, capacity=?, notes=?, cancelled=?
+      WHERE id=?`).run(actual, registered, rup, cap, saveNotes, isCancelled, parseInt(req.params.id));
+    res.json({ success: true, rup_percent: rup });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// קבלת הפוטנציאל (registered_students) האחרון לפי קו — לאוטומציה בטופס
+router.get('/ridership/last-registered', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare(`
+      SELECT line_id, registered_students, capacity
+      FROM weekly_ridership
+      WHERE registered_students > 0
+      GROUP BY line_id
+      HAVING MAX(week_number)
+    `).all();
+    const result = {};
+    rows.forEach(r => { result[r.line_id] = { registered: r.registered_students, capacity: r.capacity }; });
+    res.json(result);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // מחיקת שורה בודדת (לפי id)
 router.delete('/ridership/:id', requireRole('admin'), (req, res) => {
   try {

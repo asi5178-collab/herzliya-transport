@@ -6,6 +6,14 @@
 <link rel="stylesheet" href="css/main.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<style>
+#editModal { position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:flex;align-items:center;justify-content:center; }
+#editBox { background:white;border-radius:12px;padding:22px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.25); }
+#editBox h4 { margin:0 0 14px;font-size:15px;font-weight:700;color:#1e293b; }
+.edit-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px; }
+.edit-grid label { font-size:11px;color:#64748b;display:block;margin-bottom:3px; }
+.edit-grid input, .edit-grid select { width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;font-family:inherit; }
+</style>
 </head>
 <body>
 <div id="app">
@@ -55,7 +63,7 @@
 
           <div class="form-group" style="margin-bottom:0;">
             <label class="form-label">קו</label>
-            <select id="rLine" class="form-control"></select>
+            <select id="rLine" class="form-control" onchange="autoFillLine(this.value)"></select>
           </div>
 
           <div class="form-group" style="margin-bottom:0;">
@@ -141,13 +149,35 @@
   </div>
 </div>
 
+<!-- Edit Modal -->
+<div id="editModal" style="display:none;" onclick="if(event.target===this)closeEdit()">
+  <div id="editBox">
+    <h4><i class="bi bi-pencil-square" style="color:#7c3aed;"></i> עריכת נסיעה</h4>
+    <input type="hidden" id="editId">
+    <div class="edit-grid">
+      <div><label>נוסעים בפועל</label><input type="number" id="editActual" min="0"></div>
+      <div><label>רשומים (פוטנציאל)</label><input type="number" id="editRegistered" min="0"></div>
+      <div><label>קיבולת</label><input type="number" id="editCapacity" min="1"></div>
+      <div><label>הערות</label><input type="text" id="editNotes"></div>
+    </div>
+    <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="editCancelled" onchange="document.getElementById('editActual').disabled=this.checked">
+      <label for="editCancelled" style="font-size:13px;">נסיעה בוטלה</label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeEdit()" class="btn btn-outline btn-sm">ביטול</button>
+      <button onclick="saveEdit()" class="btn btn-primary btn-sm"><i class="bi bi-check-lg"></i> שמור</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/api.js"></script>
 <script src="js/i18n.js"></script>
 <script>
 if (!Auth.requireAuth()) {}
 document.getElementById('userBadge').textContent = Auth.getUser()?.full_name || '';
 
-let allLines = [], chartInst = null;
+let allLines = [], chartInst = null, lastRegistered = {};
 
 // חישוב תאריך ממספר שבוע (ISO)
 function weekNumToDate(weekNum, year = 2026) {
@@ -173,8 +203,18 @@ async function init() {
     document.getElementById('rLine').appendChild(new Option(l.name, l.id));
     document.getElementById('lineFilter').appendChild(new Option(l.name, l.id));
   });
+  try { lastRegistered = await API.get('/weekly/ridership/last-registered'); } catch {}
   await Promise.all([loadChart(), loadTable()]);
   loadTargets();
+}
+
+function autoFillLine(lineId) {
+  const info = lastRegistered[lineId];
+  if (!info) return;
+  const regEl = document.getElementById('rRegistered');
+  const capEl = document.getElementById('rCapacity');
+  if (!regEl.value) regEl.value = info.registered;
+  if (!capEl.value) capEl.value = info.capacity;
 }
 
 async function loadChart() {
@@ -240,7 +280,15 @@ async function loadTable() {
       </td>
       <td>${r.capacity}</td>
       <td>${r.cancelled ? '<span class="nps-badge critical">בוטלה</span>' : rupBadge(r.rup_percent)}</td>
-      <td>
+      <td style="display:flex;gap:4px;">
+        <button onclick="openEdit(${r.id},${r.actual_riders||0},${r.registered_students||0},${r.capacity||0},'${(r.notes||'').replace(/'/g,"\\'")}',${r.cancelled||0})"
+                class="btn btn-outline btn-sm" style="color:#7c3aed;border-color:#c4b5fd;" title="ערוך">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button onclick="duplicateRow(${r.week_number||0},${r.line_id},${r.registered_students||0},${r.capacity||0})"
+                class="btn btn-outline btn-sm" style="color:#0891b2;border-color:#a5f3fc;" title="שכפל לשבוע הבא">
+          <i class="bi bi-copy"></i>
+        </button>
         <button onclick="deleteRow(${r.id})" class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5;" title="מחק שורה זו">
           <i class="bi bi-trash"></i>
         </button>
@@ -250,6 +298,10 @@ async function loadTable() {
 }
 
 function lc(code) { return {'1A':'#3b82f6','1B':'#16a34a','1C':'#8b5cf6','1D':'#f59e0b','L3':'#ef4444','L8':'#06b6d4','L9':'#ec4899'}[code]||'#64748b'; }
+function rupColor(rup) {
+  const v = parseFloat(rup);
+  if (v>=40) return '#16a34a'; if (v>=25) return '#059669'; if (v>=10) return '#d97706'; return '#dc2626';
+}
 function rupBadge(rup) {
   if (rup>=40) return '<span class="nps-badge excellent">מצוין ≥40%</span>';
   if (rup>=25) return '<span class="nps-badge good">טוב 25-39%</span>';
@@ -350,6 +402,56 @@ function showResult(msg, type) {
   el.textContent = msg;
   el.style.display = 'block';
   setTimeout(() => el.style.display = 'none', 6000);
+}
+
+// --- עריכה ---
+function openEdit(id, actual, registered, capacity, notes, cancelled) {
+  document.getElementById('editId').value = id;
+  document.getElementById('editActual').value = actual;
+  document.getElementById('editRegistered').value = registered;
+  document.getElementById('editCapacity').value = capacity;
+  document.getElementById('editNotes').value = notes;
+  const cancelledChk = document.getElementById('editCancelled');
+  cancelledChk.checked = !!cancelled;
+  document.getElementById('editActual').disabled = !!cancelled;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEdit() {
+  document.getElementById('editModal').style.display = 'none';
+}
+async function saveEdit() {
+  const id = document.getElementById('editId').value;
+  const cancelled = document.getElementById('editCancelled').checked;
+  try {
+    const result = await API.put(`/weekly/ridership/${id}`, {
+      actual_riders:       cancelled ? 0 : parseInt(document.getElementById('editActual').value) || 0,
+      registered_students: parseInt(document.getElementById('editRegistered').value) || 0,
+      capacity:            parseInt(document.getElementById('editCapacity').value) || 18,
+      notes:               document.getElementById('editNotes').value,
+      cancelled:           cancelled ? 1 : 0
+    });
+    closeEdit();
+    showResult(`✅ נשמר | RUP: ${parseFloat(result.rup_percent).toFixed(1)}%`, 'success');
+    loadChart(); loadTable(); loadTargets();
+    try { lastRegistered = await API.get('/weekly/ridership/last-registered'); } catch {}
+  } catch (err) { alert('שגיאה: ' + err.message); }
+}
+
+// --- שכפול לשבוע הבא ---
+function duplicateRow(weekNum, lineId, registered, capacity) {
+  const nextWeek = weekNum + 1;
+  document.getElementById('rWeekNum').value = nextWeek;
+  autoShowDate(nextWeek);
+  const rLine = document.getElementById('rLine');
+  for (let i=0; i<rLine.options.length; i++) {
+    if (parseInt(rLine.options[i].value) === lineId) { rLine.selectedIndex = i; break; }
+  }
+  if (registered) document.getElementById('rRegistered').value = registered;
+  if (capacity)   document.getElementById('rCapacity').value   = capacity;
+  document.getElementById('rActual').value = '';
+  document.getElementById('rActual').focus();
+  document.getElementById('rActual').scrollIntoView({ behavior:'smooth', block:'center' });
+  showResult(`📋 שוכפל לשבוע W-${nextWeek} — הזן נוסעים בפועל ולחץ הוסף`, 'success');
 }
 
 init();
