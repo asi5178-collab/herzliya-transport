@@ -55,6 +55,7 @@ router.get('/rup-trend', (req, res) => {
              wr.actual_riders, wr.registered_students, wr.rup_percent, wr.capacity, wr.cancelled
       FROM weekly_ridership wr JOIN lines l ON wr.line_id = l.id
       WHERE wr.week_number IS NOT NULL AND wr.cancelled = 0
+        AND l.code IN ('1A','1B','1C','1D','1E')
       ORDER BY wr.week_number ASC, l.code
     `).all());
   } catch (err) { res.status(500).json({ error: err.message }); }

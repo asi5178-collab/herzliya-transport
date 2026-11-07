@@ -211,6 +211,18 @@
           </div>
         </div>
 
+        <!-- Solution type distribution -->
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-title"><i class="bi bi-layers" style="color:#0891b2;"></i> סיווג פתרונות — סוגי פעולות</div>
+          <div id="solutionTypeDist"></div>
+        </div>
+
+        <!-- Deep stakeholder analysis -->
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-title"><i class="bi bi-diagram-3" style="color:#7c3aed;"></i> ניתוח עמוק לפי בעלי עניין × סוג פתרון</div>
+          <div id="stakeholderDeepAnalysis"></div>
+        </div>
+
         <div class="card">
           <div class="card-title"><i class="bi bi-journal-check" style="color:#16a34a;"></i> הערות ביצוע — מה בוצע</div>
           <div id="completionNotesList"></div>
@@ -435,6 +447,96 @@ async function loadAnalysis() {
         }).join('')}
       </tbody>
     </table>`;
+
+  // ─── Solution Classification ───
+  const SOLUTION_TYPES = [
+    { key:'תקשורת',  icon:'📢', color:'#0891b2', bg:'#ecfeff',  keywords:['הודעה','whatsapp','ווטסאפ','פנה','עדכן','הודע','שלח','תקשורת','מסר','ספר','יידע'] },
+    { key:'תפעול',   icon:'🚌', color:'#d97706', bg:'#fffbeb',  keywords:['נסיעה','לוח זמן','קו ','הסעה','שעה','תיקון','מסלול','נהג','רכב','אוטובוס','עצירה','זמן'] },
+    { key:'טכנולוגיה',icon:'💻', color:'#7c3aed', bg:'#f5f3ff', keywords:['מערכת','qr','ריצוד','אפליקציה','דיווח','טכני','נתונים','ממשק','סריקה','ספירה','שגיאה'] },
+    { key:'מדיניות', icon:'📋', color:'#1e3a8a', bg:'#eff6ff',  keywords:['חוזה','קנס','תוכנית','נוהל','מדיניות','תקנון','יעד','בדיקה','הגדרה','קריטריון','כלל'] },
+  ];
+  function classifySolution(task) {
+    const text = ((task.title || '') + ' ' + (task.description || '') + ' ' + (task.category || '')).toLowerCase();
+    for (const st of SOLUTION_TYPES) {
+      if (st.keywords.some(k => text.includes(k))) return st.key;
+    }
+    return 'אחר';
+  }
+  const SOL_OTHER = { key:'אחר', icon:'✅', color:'#64748b', bg:'#f8fafc', keywords:[] };
+  const allSolTypes = [...SOLUTION_TYPES, SOL_OTHER];
+
+  // Classify all tasks
+  const allTasksFull = allTasks; // available globally
+  const byType = {};
+  allSolTypes.forEach(st => { byType[st.key] = { total:0, done:0 }; });
+  allTasksFull.forEach(t => {
+    const k = classifySolution(t);
+    byType[k].total++;
+    if (t.status === 'done') byType[k].done++;
+  });
+
+  // Render solution type distribution
+  const solHtml = allSolTypes.map(st => {
+    const b = byType[st.key];
+    if (!b.total) return '';
+    const pct = Math.round(100 * b.done / b.total);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:${st.bg};border:1px solid ${st.color}25;margin-bottom:8px;">
+      <div style="font-size:22px;min-width:36px;text-align:center;">${st.icon}</div>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:13px;color:${st.color};margin-bottom:2px;">${st.key}</div>
+        <div style="background:#e2e8f0;border-radius:10px;height:7px;margin-bottom:2px;">
+          <div style="background:${st.color};height:7px;border-radius:10px;width:${pct}%;transition:width .4s;"></div>
+        </div>
+        <div style="font-size:11px;color:#64748b;">${b.total} משימות · ${b.done} הושלמו · ${pct}% ביצוע</div>
+      </div>
+      <div style="font-weight:800;font-size:18px;color:${pct>=70?'#16a34a':pct>=40?'#d97706':'#dc2626'};">${pct}%</div>
+    </div>`;
+  }).join('');
+  document.getElementById('solutionTypeDist').innerHTML = solHtml || '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:12px;">אין נתונים לסיווג</div>';
+
+  // Render deep stakeholder × solution type analysis
+  const stakeOrder = ['עיריה ומנהל חינוך','חברת הסעות','נהגים','תלמידים','הורים'];
+  const stakeGroups = {};
+  allTasksFull.forEach(t => {
+    const k = t.stakeholder || 'כללי';
+    if (!stakeGroups[k]) stakeGroups[k] = [];
+    stakeGroups[k].push(t);
+  });
+  const sortedStakes = [...stakeOrder.filter(s => stakeGroups[s]), ...Object.keys(stakeGroups).filter(s => !stakeOrder.includes(s))];
+
+  const deepHtml = sortedStakes.map(stake => {
+    const tasks = stakeGroups[stake] || [];
+    const sub = SUBSYSTEM_MAP[stake] || { icon:'📌', color:'#64748b', bg:'#f8fafc' };
+    const done = tasks.filter(t => t.status === 'done').length;
+    const pct = tasks.length ? Math.round(100 * done / tasks.length) : 0;
+    // Count by solution type
+    const solCounts = {};
+    allSolTypes.forEach(st => { solCounts[st.key] = 0; });
+    tasks.forEach(t => { solCounts[classifySolution(t)]++; });
+    const topSols = allSolTypes.filter(st => solCounts[st.key] > 0)
+      .sort((a, b) => solCounts[b.key] - solCounts[a.key]);
+    // Open tasks preview
+    const openTasks = tasks.filter(t => t.status !== 'done').slice(0, 3);
+    return `<div style="border:1.5px solid ${sub.color}30;border-radius:10px;padding:14px;margin-bottom:12px;background:${sub.bg};">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="font-size:24px;">${sub.icon}</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:14px;color:${sub.color};">${stake}</div>
+          <div style="font-size:11px;color:#64748b;">${tasks.length} משימות סה"כ · ${done} הושלמו</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:${pct>=70?'#16a34a':pct>=40?'#d97706':'#dc2626'};">${pct}%</div>
+          <div style="font-size:10px;color:#94a3b8;">ביצוע</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        ${topSols.map(st => `<span style="background:${st.bg};border:1px solid ${st.color}40;color:${st.color};padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;">${st.icon} ${st.key} (${solCounts[st.key]})</span>`).join('')}
+      </div>
+      ${openTasks.length ? `<div style="font-size:11px;color:#64748b;margin-bottom:4px;font-weight:600;">משימות פתוחות:</div>
+      ${openTasks.map(t => `<div style="font-size:11.5px;color:#374151;padding:3px 0 3px 10px;border-right:2px solid ${sub.color}40;">${t.title} ${t.deadline && t.deadline < new Date().toISOString().split('T')[0] ? '<span style="color:#dc2626;font-size:10px;">⚠ באיחור</span>' : ''}</div>`).join('')}` : '<div style="font-size:11.5px;color:#16a34a;">✅ כל המשימות הושלמו</div>'}
+    </div>`;
+  }).join('');
+  document.getElementById('stakeholderDeepAnalysis').innerHTML = deepHtml || '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:12px;">אין נתונים</div>';
 
   // Completion notes
   if (!stats.completed.length) {

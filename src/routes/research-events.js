@@ -92,7 +92,7 @@ router.get('/academic-data', (req, res) => {
       FROM weekly_ridership WHERE week_number IS NOT NULL AND cancelled = 0
       GROUP BY week_number ORDER BY week_number ASC
     `).all();
-    const researchCodes = ['1A','1B','1C','1D','L3','L8','L9'];
+    const researchCodes = ['1A','1B','1C','1D','1E','L4','L5','L6'];
     const phs = researchCodes.map(() => '?').join(',');
     const comparison = db.prepare(`
       SELECT wr.week_number, l.code, l.ai_enabled,
@@ -126,7 +126,7 @@ router.get('/export-word', (req, res) => {
     const rupTotal = db.prepare(`SELECT week_number, week_date, SUM(actual_riders) tr, SUM(registered_students) ts,
         ROUND(100.0*SUM(actual_riders)/NULLIF(SUM(registered_students),0),2) rup
       FROM weekly_ridership WHERE week_number IS NOT NULL AND cancelled=0 GROUP BY week_number ORDER BY week_number`).all();
-    const aiCodes = ['1A','1B','1C','1D'], ctrlCodes = ['L3','L8','L9'];
+    const aiCodes = ['1A','1B','1C','1D','1E'], ctrlCodes = ['L4','L5','L6'];
     const researchCodes = [...aiCodes,...ctrlCodes];
     const phs = researchCodes.map(()=>'?').join(',');
     const comparison = db.prepare(`SELECT wr.week_number,l.code,l.ai_enabled,

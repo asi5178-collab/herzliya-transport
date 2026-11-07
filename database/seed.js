@@ -100,10 +100,10 @@ function doSeed(db) {
     insertLine.run('מהלך 7 – הנדיב/אלתרמן → מבנה קבע','M7',  'מעבר אלתרמן והנדיב למבנה הקבע תשפ"ז',                  50, 'bus', skipWp, JSON.stringify([]), 'active',  0, 'mahalakim', 'הנדיב', 'אלתרמן');
     insertLine.run('מהלך 8 – גליל ים → קריית החינוך',  'M8',  'הקמת חט"ב ותיכון בקריית החינוך גליל ים (406)',           50, 'bus', skipWp, JSON.stringify([]), 'active',  1, 'mahalakim', 'גליל ים', 'גליל ים');
 
-    // קווי ביקורת — ללא AI (קו 3, 8, 9)
-    insertLine.run('קו 3',    'L3',  'קו ביקורת — ללא AI — הרצליה פיתוח',    18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
-    insertLine.run('קו 8',    'L8',  'קו ביקורת — ללא AI — הרצליה ב׳',       18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
-    insertLine.run('קו 9',    'L9',  'קו ביקורת — ללא AI — אזור תעשייה',     18, 'minibus', skipWp, JSON.stringify([]), 'active', 0, 'regular', null, null);
+    // קווי ביקורת ישנים — מוחלפו על ידי L4/L5/L6, מוסתרים מכל תצוגה
+    insertLine.run('קו 3',    'L3',  'קו ביקורת — ללא AI — הרצליה פיתוח',    18, 'minibus', skipWp, JSON.stringify([]), 'inactive', 0, 'regular', null, null);
+    insertLine.run('קו 8',    'L8',  'קו ביקורת — ללא AI — הרצליה ב׳',       18, 'minibus', skipWp, JSON.stringify([]), 'inactive', 0, 'regular', null, null);
+    insertLine.run('קו 9',    'L9',  'קו ביקורת — ללא AI — אזור תעשייה',     18, 'minibus', skipWp, JSON.stringify([]), 'inactive', 0, 'regular', null, null);
 
     // Parent groups
     const insertGroup = db.prepare(`INSERT OR IGNORE INTO parent_groups (name, line_id, member_count) VALUES (?,?,?)`);
