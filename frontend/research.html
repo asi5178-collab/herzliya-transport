@@ -72,7 +72,7 @@
       <a href="tasks.html" class="nav-link"><i class="bi bi-check2-square"></i> משימות</a>
       <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
       <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
-      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      
       <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווים</a>
       <div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 16px;"></div>
       <a href="optimization.html" class="nav-link"><i class="bi bi-map-fill"></i> מפה</a>
@@ -540,7 +540,7 @@ function renderFindings() {
         { label: 'קבוצת ביקורת', data: ctrlWeekly, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.06)', tension: 0.3, fill: false, borderDash: [5,3], pointRadius: 4 }
       ]
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { title: { display: true, text: 'RUP%' } } } }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { min: 0, max: 100, title: { display: true, text: 'RUP%' } } } }
   });
 
   // NPS trend chart
@@ -727,35 +727,65 @@ function renderArticle() {
       id: 'architecture',
       title: '2.4 ארכיטקטורת המערכת — שכבות תת-המערכת',
       content: `
-        <p>המערכת פועלת בחמש שכבות היררכיות המייצגות את בעלי העניין. כל שכבה מייצרת נתונים ומגיבה לתפוקות השכבות האחרות:</p>
-        <div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0;font-size:13px;">
-          <div style="background:#1e3a8a;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-            <span style="font-size:20px;">🏛️</span>
-            <div><strong>עיריה ומנהל חינוך</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(רמת מדיניות)</span></div>
+        <p>המערכת פועלת בחמש שכבות היררכיות. נתוני השביעות זורמים <strong>מלמטה למעלה</strong> דרך מנוע ה-AI, ומשימות הפעולה חוזרות <strong>מלמעלה למטה</strong>:</p>
+
+        <div style="margin:18px 0;position:relative;">
+          <!-- Layer 1: עיריה — 30% wide at top -->
+          <div style="margin:0 auto 2px;width:30%;min-width:150px;">
+            <div style="background:#1e3a8a;color:white;padding:10px 14px;border-radius:10px 10px 4px 4px;text-align:center;box-shadow:0 2px 8px rgba(30,58,138,.25);">
+              <div style="font-size:17px;line-height:1;">🏛️</div>
+              <div style="font-weight:700;font-size:12.5px;margin:3px 0 1px;">עיריה ומנהל חינוך</div>
+              <div style="font-size:10.5px;opacity:.8;">מדיניות · יעדי RUP · חוזים · קנסות</div>
+            </div>
           </div>
-          <div style="background:#eff6ff;padding:10px 16px;font-size:12px;color:#1e3a8a;">מדיניות · יעדי RUP · חוזה עם חברת הסעות · קנסות על ביצועים · פיקוח תקציבי</div>
-          <div style="background:#7c3aed;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-            <span style="font-size:20px;">🚌</span>
-            <div><strong>חברת הסעות</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(רמת תפעול)</span></div>
+          <div style="text-align:center;color:#cbd5e1;line-height:1.1;font-size:16px;margin:0;">▼</div>
+
+          <!-- Layer 2: חברת הסעות — 48% -->
+          <div style="margin:0 auto 2px;width:48%;min-width:190px;">
+            <div style="background:#7c3aed;color:white;padding:10px 14px;border-radius:4px;text-align:center;box-shadow:0 2px 8px rgba(124,58,237,.25);">
+              <div style="font-size:17px;line-height:1;">🚌</div>
+              <div style="font-weight:700;font-size:12.5px;margin:3px 0 1px;">חברת הסעות</div>
+              <div style="font-size:10.5px;opacity:.8;">לוחות זמנים · שיבוץ נהגים · דיווח שבועי</div>
+            </div>
           </div>
-          <div style="background:#f5f3ff;padding:10px 16px;font-size:12px;color:#5b21b6;">לוחות זמנים · שיבוץ נהגים · ניהול רכב · דיווח שבועי לעירייה · טיפול בתלונות</div>
-          <div style="background:#d97706;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-            <span style="font-size:20px;">🧑‍✈️</span>
-            <div><strong>נהגים</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(רמת ביצוע)</span></div>
+          <div style="text-align:center;color:#cbd5e1;line-height:1.1;font-size:16px;margin:0;">▼</div>
+
+          <!-- Layer 3: נהגים — 65% -->
+          <div style="margin:0 auto 2px;width:65%;min-width:230px;">
+            <div style="background:#d97706;color:white;padding:10px 14px;border-radius:4px;text-align:center;box-shadow:0 2px 8px rgba(217,119,6,.25);">
+              <div style="font-size:17px;line-height:1;">🧑‍✈️</div>
+              <div style="font-weight:700;font-size:12.5px;margin:3px 0 1px;">נהגים</div>
+              <div style="font-size:10.5px;opacity:.8;">הפעלת קו · ספירת נוסעים · דיווח תקלות</div>
+            </div>
           </div>
-          <div style="background:#fffbeb;padding:10px 16px;font-size:12px;color:#92400e;">הפעלת הקו · ספירת נוסעים עולים · דיווח תקלות · תקשורת ישירה עם הורים</div>
-          <div style="background:#16a34a;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-            <span style="font-size:20px;">🎒</span>
-            <div><strong>תלמידים</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(מוטבי השירות)</span></div>
+          <div style="text-align:center;color:#cbd5e1;line-height:1.1;font-size:16px;margin:0;">▼</div>
+
+          <!-- Layer 4: תלמידים — 82% -->
+          <div style="margin:0 auto 2px;width:82%;min-width:270px;">
+            <div style="background:#16a34a;color:white;padding:10px 14px;border-radius:4px;text-align:center;box-shadow:0 2px 8px rgba(22,163,74,.25);">
+              <div style="font-size:17px;line-height:1;">🎒</div>
+              <div style="font-weight:700;font-size:12.5px;margin:3px 0 1px;">תלמידים</div>
+              <div style="font-size:10.5px;opacity:.8;">שימוש בשירות · RUP · מועצת תלמידים</div>
+            </div>
           </div>
-          <div style="background:#f0fdf4;padding:10px 16px;font-size:12px;color:#166534;">שימוש בשירות · עמידה בלוחות זמנים · פידבק דרך מועצת תלמידים · התנהגות עלייה/ירידה</div>
-          <div style="background:#dc2626;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
-            <span style="font-size:20px;">👪</span>
-            <div><strong>הורים</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(מדידת שביעות רצון)</span></div>
+          <div style="text-align:center;color:#cbd5e1;line-height:1.1;font-size:16px;margin:0;">▼</div>
+
+          <!-- Layer 5: הורים — 100% (base) -->
+          <div style="margin:0 auto 2px;width:100%;">
+            <div style="background:#dc2626;color:white;padding:12px 14px;border-radius:4px 4px 10px 10px;text-align:center;box-shadow:0 2px 8px rgba(220,38,38,.25);">
+              <div style="font-size:17px;line-height:1;">👪</div>
+              <div style="font-weight:700;font-size:12.5px;margin:3px 0 1px;">הורים — בסיס מדידת השביעות</div>
+              <div style="font-size:10.5px;opacity:.8;">WhatsApp · NPS שבועי · תלונות · הצעות · ביטולים</div>
+            </div>
           </div>
-          <div style="background:#fef2f2;padding:10px 16px;font-size:12px;color:#991b1b;">הודעות WhatsApp · NPS שבועי · תלונות ספציפיות · הצעות שיפור · ביטולים</div>
+
+          <!-- AI Closed Loop annotation -->
+          <div style="margin-top:12px;background:linear-gradient(135deg,#f5f3ff,#eff6ff);border:1.5px solid #c4b5fd;border-radius:10px;padding:10px 14px;text-align:center;font-size:12px;color:#5b21b6;">
+            <strong>🤖 מנוע AI (Claude)</strong> — קורא נתוני הורים ↑ · מחשב NPS · מייצר משימות ↓ לחברת הסעות ולנהגים
+          </div>
         </div>
-        <p style="font-size:12px;color:#64748b;text-align:center;">כל שכבה מייצרת נתונים שזורמים למערכת ה-AI. תפוקות ה-AI (המלצות ומשימות) נשלחות בחזרה לשכבות הרלוונטיות.</p>
+
+        <p style="font-size:12px;color:#64748b;text-align:center;">הפירמידה מייצגת זרימת סמכות מלמעלה (מדיניות) ↓ וזרימת מידע מלמטה (שביעות רצון) ↑. ה-AI סוגר את הלולאה.</p>
       `
     },
     {
@@ -797,10 +827,10 @@ function renderArticle() {
           <div style="border:1px solid #d1fae5;border-right:4px solid #10b981;border-radius:8px;padding:12px;">
             <div style="font-weight:700;color:#065f46;margin-bottom:6px;font-size:13px;">🗃️ RAG — Retrieval Augmented Generation</div>
             <ul style="font-size:12px;color:#374151;margin:0;padding-right:16px;">
-              <li>היסטוריית NPS ואירועים כהקשר</li>
-              <li>ניתוח השוואתי שבועות קודמים</li>
-              <li>זיהוי דפוסים עונתיים אוטומטי</li>
-              <li>הפחתת הזיות על ידי עיגון בנתונים</li>
+              <li><strong>מסמכי עירייה:</strong> נהלי הסעות, חוזי חברות, יעדי RUP</li>
+              <li><strong>מצגות שיפור תחבורה:</strong> תוכניות פיתוח מערב הרצליה</li>
+              <li><strong>נתוני קווי אוטובוס באזור:</strong> תדירות, ניצול, נתוני מע"צ</li>
+              <li><strong>היסטוריית NPS ואירועים:</strong> הקשר שבועות קודמים לניתוח מדויק</li>
             </ul>
           </div>
           <div style="border:1px solid #ede9fe;border-right:4px solid #7c3aed;border-radius:8px;padding:12px;">

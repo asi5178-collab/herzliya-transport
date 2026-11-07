@@ -27,7 +27,7 @@
 
       <div class="nav-section">נתונים</div>
       <a href="students.html" class="nav-link"><i class="bi bi-people"></i> תלמידים</a>
-      <a href="zones.html" class="nav-link"><i class="bi bi-map"></i> אזורים</a>
+      
       <a href="lines.html" class="nav-link"><i class="bi bi-signpost-2"></i> קווי הסעה</a>
 
       <div class="nav-section">כלים</div>
@@ -79,11 +79,11 @@
           </div>
         </div>
         <div class="kpi-card orange">
-          <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+          <div class="kpi-icon"><i class="bi bi-person-check-fill"></i></div>
           <div>
-            <div class="kpi-value" id="studentsValue">--</div>
-            <div class="kpi-label">תלמידים פעילים</div>
-            <div class="kpi-trend" id="ridersValue"></div>
+            <div class="kpi-value" id="ridersValue">--</div>
+            <div class="kpi-label">נסעו השבוע</div>
+            <div class="kpi-trend" id="ridersTrend" style="font-size:12px;margin-top:4px;"></div>
           </div>
         </div>
         <div class="kpi-card red">
@@ -128,7 +128,7 @@
           <div class="card-title" style="margin-bottom:0;">
             <i class="bi bi-bar-chart-line" style="color:#7c3aed;"></i> מחקר: השוואת RUP — קבוצת ניסוי (AI) מול קבוצת ביקורת
           </div>
-          <div style="font-size:11px;color:#94a3b8;">קו 1 7א, 1 7ב, 1 7ג, <strong>1 7ד</strong> (AI) · קו 3, 8, 9 (ביקורת)</div>
+          <div style="font-size:11px;color:#94a3b8;">קו 1 7א, 1 7ב, 1 7ג, 1 7ד, <strong>1 7ח</strong> (AI) · קו 4, 5, 6 (ביקורת)</div>
         </div>
         <div id="researchMsg" style="display:none;text-align:center;padding:24px;color:#94a3b8;font-size:13px;">אין עדיין נתוני שימוש בקווי המחקר</div>
         <div class="chart-wrapper" style="height:220px;"><canvas id="researchChart"></canvas></div>
@@ -190,8 +190,6 @@ async function loadDashboard() {
     npsBadgeEl.className = `nps-badge ${lvl}`;
     npsBadgeEl.textContent = satisfactionLabel(lvl);
 
-    document.getElementById('studentsValue').textContent = summary.total_students;
-    document.getElementById('ridersValue').textContent = `נסעו השבוע: ${summary.total_riders_last_week}`;
     document.getElementById('tasksValue').textContent = summary.open_tasks;
     document.getElementById('weeksValue').textContent = `${summary.weeks_tracked} שבועות במעקב`;
 
@@ -302,12 +300,12 @@ async function loadDashboard() {
         data: {
           labels: resWeeks,
           datasets: [{
-            label: 'קבוצת ניסוי — AI (קו 1 7א, 1 7ב, 1 7ג, 1 7ד) ממוצע RUP%',
+            label: 'קבוצת ניסוי — AI (קו 1 7א, 1 7ב, 1 7ג, 1 7ד, 1 7ח) ממוצע RUP%',
             data: researchData.map(w => w.avg_rup_ai),
             borderColor: '#7c3aed', backgroundColor: '#7c3aed20',
             tension: 0.4, fill: true, pointRadius: 6, borderWidth: 2.5, spanGaps: true
           }, {
-            label: 'קבוצת ביקורת — ללא AI (3, 8, 9) ממוצע RUP%',
+            label: 'קבוצת ביקורת — ללא AI (4, 5, 6) ממוצע RUP%',
             data: researchData.map(w => w.avg_rup_control),
             borderColor: '#f97316', backgroundColor: '#f9731620',
             tension: 0.4, fill: true, pointRadius: 6, borderWidth: 2.5, spanGaps: true, borderDash: [6,3]
@@ -316,7 +314,7 @@ async function loadDashboard() {
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, usePointStyle: true } } },
-          scales: { y: { beginAtZero: true, max: 60, title: { display: true, text: 'RUP %' } } }
+          scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: 'RUP %' } } }
         }
       });
       // Summary stats
@@ -339,6 +337,24 @@ async function loadDashboard() {
       </div>
     `).join('');
     document.getElementById('tasksList').innerHTML = tasksHtml || '<div style="color:#94a3b8;text-align:center;padding:20px;">אין משימות פתוחות</div>';
+
+    // KPI: נסעו השבוע + קצב שינוי שבועי
+    const weeklySortedAll = (weekly || []).filter(w => w.week_number && w.total_riders != null);
+    const thisWeek  = weeklySortedAll[0];
+    const lastWeekW = weeklySortedAll[1];
+    const thisRiders = thisWeek?.total_riders || summary.total_riders_last_week || 0;
+    document.getElementById('ridersValue').textContent = thisRiders;
+    if (thisWeek && lastWeekW && lastWeekW.total_riders > 0) {
+      const diff = thisRiders - lastWeekW.total_riders;
+      const pct  = ((diff / lastWeekW.total_riders) * 100).toFixed(1);
+      const color = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#94a3b8';
+      const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+      document.getElementById('ridersTrend').innerHTML =
+        `<span style="color:${color};font-weight:700;">${arrow} ${Math.abs(diff)} (${diff>0?'+':''}${pct}%)</span>
+         <span style="color:#94a3b8;"> לעומת W-${lastWeekW.week_number}</span>`;
+    } else {
+      document.getElementById('ridersTrend').textContent = `W-${thisWeek?.week_number || '—'}`;
+    }
 
     // Weekly table — מסנן שבועות ללא NPS ומציג רק שבועות עם נתונים מלאים
     const weeklySorted = (weekly || []).filter(w => w.week_number).slice(0, 8);
