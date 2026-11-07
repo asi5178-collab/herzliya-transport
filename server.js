@@ -77,6 +77,14 @@ try {
     "UPDATE lines SET default_registered=40 WHERE code='L3'",
     "UPDATE lines SET default_registered=25 WHERE code='L8'",
     "UPDATE lines SET default_registered=50 WHERE code='L9'",
+    "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type,school_from) VALUES ('קו 1 7ח','1E','קו מחקר — ניסוי עם AI — הרחבת אזור 7',18,'minibus','[]','[]','active',1,'regular','הרחבה — אזור 7')",
+    "UPDATE lines SET default_registered=0 WHERE code='1E'",
+    "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type) VALUES ('קו 4','L4','קו ביקורת — ללא AI',50,'bus','[]','[]','active',0,'regular')",
+    "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type) VALUES ('קו 5','L5','קו ביקורת — ללא AI',50,'bus','[]','[]','active',0,'regular')",
+    "INSERT OR IGNORE INTO lines (name,code,description,capacity,vehicle_type,waypoints,zone_ids,status,ai_enabled,route_type) VALUES ('קו 6','L6','קו ביקורת — ללא AI',50,'bus','[]','[]','active',0,'regular')",
+    "UPDATE lines SET default_registered=0 WHERE code='L4'",
+    "UPDATE lines SET default_registered=0 WHERE code='L5'",
+    "UPDATE lines SET default_registered=0 WHERE code='L6'",
     "UPDATE weekly_ridership SET cancelled=1 WHERE notes='בוטל'",
   ];
   for (const sql of lineFixSql) { try { _mdb.exec(sql); console.log('Line fix OK:', sql.substring(25, 50)); } catch (e) { console.error('Line fix error:', e.message); } }
@@ -89,6 +97,7 @@ try {
     "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,metric_before,metric_after,impact_note,source) VALUES (4,'2026-05-26',22,'intervention','פעולה מתקנת — קנס + תוכנית שיפור','הטלת קנס על חברת ההסעות. גיבוש תוכנית ספטמבר עם 3 אוטובוסים. שיפור מנגנוני דיווח. NPS עלה חזרה ל-3.20.','[\"1A\",\"1B\",\"1C\"]','{\"nps\":2.93,\"rup\":10.1}','{\"nps\":3.20,\"rup\":12.0}','מדגים את יכולת המערכת לזהות ולתקן תקלות — זמן תגובה של שבוע אחד בין זיהוי המשבר להפעלת פתרון.','auto')",
     "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,impact_note,source) VALUES (5,'2026-08-31',36,'external_factor','תחילת שנת הלימודים תשפ\"ז — חזרה מחופש קיץ','חזרה לפעילות מלאה לאחר הפסקת קיץ. RUP עלה ל-9-27% — גידול משמעותי לעומת ממוצע השנה הקודמת, מעיד על אימוץ הולך וגדל של השירות.','[\"1A\",\"1B\",\"1C\"]','תחילת שנה מהווה נקודת מדידה קריטית — עלייה ב-RUP מ-12% (W22) ל-27% (W36) מצביעה על גידול של 125% בניצול לאורך הקיץ.','auto')",
     "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,impact_note,source) VALUES (6,'2026-10-23',43,'expansion','הרחבת הניסוי — קו 1 7ד, אולפנת צביה','הוספת קו מחקר רביעי (1D) — הרחבת הניסוי לאולפנת צביה. מהווה ראיה לדופוסי שכפול ולהרחבת המערכת לבתי ספר נוספים.','[\"1D\"]','שלב ההרחבה (Scale-up) — מעבר מניסוי ב-3 קווים ל-4 קווים מדגים scalability של הפלטפורם ואפשרות לשכפולה בערים נוספות.','auto')",
+    "INSERT OR IGNORE INTO research_events (id,event_date,week_number,event_type,title,description,lines_affected,impact_note,source) VALUES (7,'2026-11-07',45,'expansion','הרחבת הניסוי — קו 1 7ח, הרחבת אזור 7','הוספת קו מחקר חמישי (1E) — הרחבה נוספת בתוך אזור 7 כתוצאה משיפור מדדי RUP ו-NPS. ראיה לכך שמדדים גבוהים מייצרים ביקוש לשירות ומובילים להרחבתו.','[\"1E\"]','הרחבה מונעת-נתונים — גידול בביקוש (RUP עולה) גרם להוספת קו חדש. מדגים את הערך המחקרי: מערכת AI טובה מייצרת צמיחה אורגנית של השירות.','auto')",
   ];
   for (const sql of researchEventsSql) { try { _mdb.exec(sql); } catch {} }
 

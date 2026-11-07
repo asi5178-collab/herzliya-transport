@@ -290,6 +290,27 @@ let allTasks = [], currentFilter = 'all', editId = null;
 let pendingDoneId = null;
 let currentTab = 'tasks';
 
+// ─── תתי מערכות ───
+const SUBSYSTEM_MAP = {
+  'ערן ראובני':       'עיריה ומנהל חינוך',
+  'מנהל החינוך':      'עיריה ומנהל חינוך',
+  'חברת דברת':        'חברת הסעות',
+  'נהג':              'נהגים',
+  'מועצת תלמידים':   'תלמידים',
+  'הורים':            'הורים',
+};
+const SUBSYSTEM_ORDER = ['עיריה ומנהל חינוך','חברת הסעות','נהגים','תלמידים','הורים'];
+const SUBSYSTEM_META = {
+  'עיריה ומנהל חינוך': { icon:'🏛️', color:'#1e3a8a', bg:'#eff6ff' },
+  'חברת הסעות':        { icon:'🚌', color:'#7c3aed', bg:'#f5f3ff' },
+  'נהגים':             { icon:'🧑‍✈️', color:'#d97706', bg:'#fffbeb' },
+  'תלמידים':           { icon:'🎒', color:'#16a34a', bg:'#f0fdf4' },
+  'הורים':             { icon:'👪', color:'#dc2626', bg:'#fef2f2' },
+};
+function getSubsystem(stakeholder) {
+  return SUBSYSTEM_MAP[stakeholder] || stakeholder || 'כללי';
+}
+
 // ─── Load ───
 async function load() {
   allTasks = await API.tasks();
@@ -489,24 +510,31 @@ function render() {
   }
   document.getElementById('emptyMsg').style.display = 'none';
 
-  const byStake = {};
+  // קיבוץ לפי תת-מערכת
+  const bySub = {};
   filtered.forEach(t => {
-    const s = t.stakeholder || 'אחר';
-    if (!byStake[s]) byStake[s] = [];
-    byStake[s].push(t);
+    const s = getSubsystem(t.stakeholder);
+    if (!bySub[s]) bySub[s] = [];
+    bySub[s].push(t);
   });
+  // מיון לפי סדר המוגדר
+  const orderedSubs = [...SUBSYSTEM_ORDER.filter(s => bySub[s]), ...Object.keys(bySub).filter(s => !SUBSYSTEM_ORDER.includes(s))];
 
   let html = '';
-  for (const [stake, tasks] of Object.entries(byStake)) {
+  for (const sub of orderedSubs) {
+    const tasks = bySub[sub];
     const open = tasks.filter(t=>t.status!=='done').length;
     const done = tasks.filter(t=>t.status==='done').length;
-    html += `<div style="background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.04em;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-      <span>${stake.toUpperCase()}</span>
-      <span style="font-weight:400;font-size:10px;">
+    const meta = SUBSYSTEM_META[sub] || { icon:'📋', color:'#64748b', bg:'#f8fafc' };
+    // מציג רק משימות עיקריות: לא הושלמו, או 3 אחרונות שהושלמו
+    const mainTasks = [...tasks.filter(t=>t.status!=='done'), ...tasks.filter(t=>t.status==='done').slice(-2)];
+    html += `<div style="background:${meta.bg};padding:10px 16px;font-size:12px;font-weight:700;color:${meta.color};border-bottom:2px solid ${meta.color}30;display:flex;justify-content:space-between;align-items:center;border-radius:4px 4px 0 0;margin-top:8px;">
+      <span>${meta.icon} ${sub}</span>
+      <span style="font-weight:400;font-size:11px;">
         <span style="color:#dc2626;">${open} פתוח</span> &nbsp;·&nbsp; <span style="color:#16a34a;">${done} הושלם</span>
       </span>
     </div>`;
-    tasks.forEach(t => {
+    mainTasks.forEach(t => {
       const overdue = t.deadline && t.deadline < today && t.status !== 'done';
       const daysLeft = t.deadline ? Math.ceil((new Date(t.deadline) - new Date()) / 86400000) : null;
       html += `

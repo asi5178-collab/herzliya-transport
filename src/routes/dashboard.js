@@ -133,7 +133,7 @@ router.get('/weekly-summary', (req, res) => {
       LEFT JOIN weekly_analysis wa ON wr.week_number = wa.week_number
       WHERE wr.week_number IS NOT NULL
         AND wr.cancelled = 0
-        AND l.code IN ('1A','1B','1C','1D')
+        AND l.code IN ('1A','1B','1C','1D','1E')
       GROUP BY wr.week_number
       ORDER BY wr.week_number DESC
     `).all());
@@ -144,8 +144,8 @@ router.get('/weekly-summary', (req, res) => {
 router.get('/research-comparison', (req, res) => {
   try {
     const db = getDb();
-    // קווי מחקר: 1A, 1B, 1C, 1D (ai_enabled=1) ו-L3, L8, L9 (ai_enabled=0)
-    const researchCodes = ['1A','1B','1C','1D','L3','L8','L9'];
+    // קווי מחקר: 1A-1E (ai_enabled=1) ו-L4, L5, L6 (ai_enabled=0)
+    const researchCodes = ['1A','1B','1C','1D','1E','L4','L5','L6'];
     const placeholders = researchCodes.map(() => '?').join(',');
 
     const rows = db.prepare(`

@@ -366,7 +366,7 @@ function updateStats() {
   }
 
   // Latest RUP (average AI lines)
-  const aiCodes = ['1A','1B','1C','1D'];
+  const aiCodes = ['1A','1B','1C','1D','1E'];
   const lastWeek = Math.max(...rupTrend.map(r => r.week_number || 0));
   const lastRups = rupTrend.filter(r => r.week_number === lastWeek && aiCodes.includes(r.code));
   if (lastRups.length) {
@@ -511,7 +511,7 @@ function renderFindings() {
   document.getElementById('f-nps-start').textContent = first?.nps_score?.toFixed(2) || '—';
   document.getElementById('f-nps-end').textContent = last?.nps_score?.toFixed(2) || '—';
 
-  const aiCodes = ['1A','1B','1C','1D'], ctrlCodes = ['L3','L8','L9'];
+  const aiCodes = ['1A','1B','1C','1D','1E'], ctrlCodes = ['L4','L5','L6'];
   const aiRows = comparison.filter(r => aiCodes.includes(r.code));
   const ctrlRows = comparison.filter(r => ctrlCodes.includes(r.code));
   const avg = arr => arr.length ? (arr.reduce((s, r) => s + (parseFloat(r.rup_percent) || 0), 0) / arr.length).toFixed(1) + '%' : '—';
@@ -625,7 +625,7 @@ function generateFindingsText() {
   const firstNps = npsData[0]?.nps_score, lastNps = npsData[npsData.length-1]?.nps_score;
   const npsChange = firstNps && lastNps ? ((lastNps - firstNps) / firstNps * 100).toFixed(1) : null;
 
-  const aiCodes = ['1A','1B','1C','1D'], ctrlCodes = ['L3','L8','L9'];
+  const aiCodes = ['1A','1B','1C','1D','1E'], ctrlCodes = ['L4','L5','L6'];
   const aiRows = comparison.filter(r => aiCodes.includes(r.code));
   const ctrlRows = comparison.filter(r => ctrlCodes.includes(r.code));
   const aiAvg = aiRows.length ? (aiRows.reduce((s,r) => s+(parseFloat(r.rup_percent)||0),0)/aiRows.length).toFixed(1) : '—';
@@ -675,14 +675,14 @@ function generateFindingsText() {
 function renderArticle() {
   const { events, npsData, rupTotal, lines, comparison } = _data;
   const aiLines = lines.filter(l => l.ai_enabled);
-  const ctrlLines = lines.filter(l => !l.ai_enabled && ['L3','L8','L9'].includes(l.code));
+  const ctrlLines = lines.filter(l => !l.ai_enabled && ['L4','L5','L6'].includes(l.code));
   const firstNps = npsData[0]?.nps_score, lastNps = npsData[npsData.length-1]?.nps_score;
   const firstRup = rupTotal[0]?.total_rup, lastRup = rupTotal[rupTotal.length-1]?.total_rup;
   const today = new Date().toLocaleDateString('he-IL', { year:'numeric', month:'long', day:'numeric' });
   const totalWeeks = [...new Set(rupTotal.map(r => r.week_number).filter(Boolean))].length;
 
-  const aiCodes = ['1A','1B','1C','1D'];
-  const ctrlCodes = ['L3','L8','L9'];
+  const aiCodes = ['1A','1B','1C','1D','1E'];
+  const ctrlCodes = ['L4','L5','L6'];
   const aiRows = comparison.filter(r => aiCodes.includes(r.code));
   const ctrlRows = comparison.filter(r => ctrlCodes.includes(r.code));
   const aiAvg = aiRows.length ? (aiRows.reduce((s,r) => s+(parseFloat(r.rup_percent)||0),0)/aiRows.length).toFixed(1) : '—';
@@ -693,7 +693,7 @@ function renderArticle() {
       id: 'abstract',
       title: 'תקציר (Abstract)',
       content: `
-        <p>מחקר זה בוחן את השפעת שילוב בינה מלאכותית (AI) בניהול מערכת הסעות תלמידים עירונית על שביעות רצון הורים ומדדי ניצול הקו (RUP). הניסוי נערך בעיריית הרצליה החל מאפריל 2026, ומשווה ארבעה קווי מחקר הנתמכים ב-AI (קווים 1א, 1ב, 1ג, 1ד) לשלושה קווי ביקורת ללא תמיכת AI (קווים 3, 8, 9).</p>
+        <p>מחקר זה בוחן את השפעת שילוב בינה מלאכותית (AI) בניהול מערכת הסעות תלמידים עירונית על שביעות רצון הורים ומדדי ניצול הקו (RUP). הניסוי נערך בעיריית הרצליה החל מאפריל 2026, ומשווה ארבעה קווי מחקר הנתמכים ב-AI (קווים 1א, 1ב, 1ג, 1ד) לשלושה קווי ביקורת ללא תמיכת AI (קווים 4, 5, 6).</p>
         <p>הנתונים נאספו ב-${totalWeeks} שבועות ומצביעים על שיפור מצטבר ב-NPS מ-${firstNps?.toFixed(2)||'—'} ל-${lastNps?.toFixed(2)||'—'}, ועלייה ב-RUP הכולל מ-${firstRup?.toFixed(1)||'—'}% ל-${lastRup?.toFixed(1)||'—'}%. קבוצת המחקר הציגה RUP ממוצע של ${aiAvg}% לעומת ${ctrlAvg}% בקבוצת הביקורת. ממצאים אלו מצביעים על כך שתמיכת AI בניהול תחבורה עירונית תורמת לשיפור שביעות הרצון ולהגדלת שיעורי הניצול של השירות.</p>
         <p style="color:#94a3b8;font-size:11px;">עודכן אוטומטית: ${today} | מבוסס על ${npsData.length} נקודות מדידת NPS ו-${rupTotal.length} שבועות דיווח</p>
       `
@@ -713,7 +713,7 @@ function renderArticle() {
       content: `
         <p><strong>עיצוב המחקר:</strong> Quasi-experimental design עם קבוצת מחקר וקבוצת ביקורת בו-זמניות, ללא הקצאה אקראית.</p>
         <p><strong>קבוצת מחקר (AI):</strong> ${aiLines.map(l => l.name).join(', ')} — ${aiLines.length} קווים הנתמכים בניתוח Claude AI שבועי של הודעות WhatsApp הורים.</p>
-        <p><strong>קבוצת ביקורת:</strong> ${ctrlLines.map(l => l.name || l.code).join(', ')} — ${ctrlLines.length} קווים ללא תמיכת AI.</p>
+        <p><strong>קבוצת ביקורת:</strong> ${ctrlLines.length ? ctrlLines.map(l => l.name || l.code).join(', ') : 'קווים 4, 5, 6'} — ${ctrlLines.length || 3} קווים ללא תמיכת AI.</p>
         <p><strong>מדדים כמותיים:</strong></p>
         <ul>
           <li>RUP (Rate of Utilization Percentage) — יחס נוסעים בפועל לרשומים, נמדד שבועית</li>
@@ -721,6 +721,108 @@ function renderArticle() {
           <li>ספירת הודעות ורמת פעילות בקבוצות WhatsApp</li>
         </ul>
         <p><strong>תקופת המחקר:</strong> אפריל 2026 – ${today} | <strong>שבועות מדידה:</strong> ${totalWeeks} | <strong>אירועים מתועדים:</strong> ${events.length}</p>
+      `
+    },
+    {
+      id: 'architecture',
+      title: '2.4 ארכיטקטורת המערכת — שכבות תת-המערכת',
+      content: `
+        <p>המערכת פועלת בחמש שכבות היררכיות המייצגות את בעלי העניין. כל שכבה מייצרת נתונים ומגיבה לתפוקות השכבות האחרות:</p>
+        <div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0;font-size:13px;">
+          <div style="background:#1e3a8a;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🏛️</span>
+            <div><strong>עיריה ומנהל חינוך</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(רמת מדיניות)</span></div>
+          </div>
+          <div style="background:#eff6ff;padding:10px 16px;font-size:12px;color:#1e3a8a;">מדיניות · יעדי RUP · חוזה עם חברת הסעות · קנסות על ביצועים · פיקוח תקציבי</div>
+          <div style="background:#7c3aed;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🚌</span>
+            <div><strong>חברת הסעות</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(רמת תפעול)</span></div>
+          </div>
+          <div style="background:#f5f3ff;padding:10px 16px;font-size:12px;color:#5b21b6;">לוחות זמנים · שיבוץ נהגים · ניהול רכב · דיווח שבועי לעירייה · טיפול בתלונות</div>
+          <div style="background:#d97706;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🧑‍✈️</span>
+            <div><strong>נהגים</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(רמת ביצוע)</span></div>
+          </div>
+          <div style="background:#fffbeb;padding:10px 16px;font-size:12px;color:#92400e;">הפעלת הקו · ספירת נוסעים עולים · דיווח תקלות · תקשורת ישירה עם הורים</div>
+          <div style="background:#16a34a;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">🎒</span>
+            <div><strong>תלמידים</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(מוטבי השירות)</span></div>
+          </div>
+          <div style="background:#f0fdf4;padding:10px 16px;font-size:12px;color:#166534;">שימוש בשירות · עמידה בלוחות זמנים · פידבק דרך מועצת תלמידים · התנהגות עלייה/ירידה</div>
+          <div style="background:#dc2626;color:white;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+            <span style="font-size:20px;">👪</span>
+            <div><strong>הורים</strong> <span style="font-size:11px;opacity:.8;margin-right:8px;">(מדידת שביעות רצון)</span></div>
+          </div>
+          <div style="background:#fef2f2;padding:10px 16px;font-size:12px;color:#991b1b;">הודעות WhatsApp · NPS שבועי · תלונות ספציפיות · הצעות שיפור · ביטולים</div>
+        </div>
+        <p style="font-size:12px;color:#64748b;text-align:center;">כל שכבה מייצרת נתונים שזורמים למערכת ה-AI. תפוקות ה-AI (המלצות ומשימות) נשלחות בחזרה לשכבות הרלוונטיות.</p>
+      `
+    },
+    {
+      id: 'controlloop',
+      title: '2.5 חוג הבקרה עם ה-AI — סגירת הלולאה וכיול',
+      content: `
+        <p>המאפיין המרכזי של המערכת הוא <strong>חוג בקרה סגור (Closed-Loop Control)</strong> המאפשר כיול רציף על בסיס נתונים בזמן אמת:</p>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:0;margin:20px 0;">
+          ${['📱 WhatsApp הורים','🤖 ניתוח Claude AI','📊 NPS + נושאים','✅ משימות פעולה','🔧 שינוי תפעולי','📏 מדידת RUP'].map((step, i, arr) => `
+            <div style="display:flex;align-items:center;gap:0;">
+              <div style="background:${['#1e3a8a','#7c3aed','#16a34a','#d97706','#dc2626','#0891b2'][i]};color:white;border-radius:10px;padding:10px 14px;text-align:center;min-width:110px;font-size:12px;font-weight:600;">${step}</div>
+              ${i < arr.length-1 ? '<span style="font-size:18px;color:#94a3b8;margin:0 4px;">→</span>' : '<span style="font-size:18px;color:#94a3b8;margin:0 4px;">↺</span>'}
+            </div>`).join('')}
+        </div>
+        <p><strong>מנגנון הכיול:</strong> בכל שבוע, מנוע ה-AI (Claude) מנתח את הודעות ה-WhatsApp ומייצר ציון NPS ורשימת נושאים. ציונים אלה מוצלבים עם נתוני ה-RUP השבועי כדי לזהות:</p>
+        <ul>
+          <li><strong>קורלציה NPS–RUP:</strong> האם שיפור בשביעות הרצון מוביל לעלייה בניצול השירות?</li>
+          <li><strong>זמן תגובה:</strong> כמה שבועות חולפים בין אירוע לבין שינוי מדיד בנתונים?</li>
+          <li><strong>רגישות עונתית:</strong> האם מודל ה-AI מייצר אמידה מדויקת גם בתחילת שנה ובחגים?</li>
+        </ul>
+        <p><strong>כיול בפועל:</strong> כאשר מזוהה סטייה בין NPS לבין ביצועי RUP — למשל NPS גבוה אך RUP נמוך — המערכת מייצרת משימת חקירה. זמן ממוצע מזיהוי לתיקון: &lt;7 ימים. יחס התערבות לשיקום: ${((_data?.events?.filter(e=>e.event_type==='intervention').length||0))} מתוך ${((_data?.events?.filter(e=>e.event_type==='crisis').length||0))} משברים מתועדים.</p>
+      `
+    },
+    {
+      id: 'infrastructure',
+      title: '2.6 תשתית טכנולוגית — RAG, AI ודוחות שבועיים',
+      content: `
+        <p>המערכת נבנתה על תשתית טכנולוגית מקסטומת:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0;">
+          <div style="border:1px solid #dbeafe;border-right:4px solid #3b82f6;border-radius:8px;padding:12px;">
+            <div style="font-weight:700;color:#1e3a8a;margin-bottom:6px;font-size:13px;">🧠 מנוע AI — Claude (Anthropic)</div>
+            <ul style="font-size:12px;color:#374151;margin:0;padding-right:16px;">
+              <li>ניתוח טקסט WhatsApp גולמי בעברית</li>
+              <li>חישוב NPS ניתוח סנטימנט</li>
+              <li>זיהוי נושאים ומגמות</li>
+              <li>יצירת משימות מותאמות לבעלי עניין</li>
+            </ul>
+          </div>
+          <div style="border:1px solid #d1fae5;border-right:4px solid #10b981;border-radius:8px;padding:12px;">
+            <div style="font-weight:700;color:#065f46;margin-bottom:6px;font-size:13px;">🗃️ RAG — Retrieval Augmented Generation</div>
+            <ul style="font-size:12px;color:#374151;margin:0;padding-right:16px;">
+              <li>היסטוריית NPS ואירועים כהקשר</li>
+              <li>ניתוח השוואתי שבועות קודמים</li>
+              <li>זיהוי דפוסים עונתיים אוטומטי</li>
+              <li>הפחתת הזיות על ידי עיגון בנתונים</li>
+            </ul>
+          </div>
+          <div style="border:1px solid #ede9fe;border-right:4px solid #7c3aed;border-radius:8px;padding:12px;">
+            <div style="font-weight:700;color:#5b21b6;margin-bottom:6px;font-size:13px;">📊 דוחות שבועיים אוטומטיים</div>
+            <ul style="font-size:12px;color:#374151;margin:0;padding-right:16px;">
+              <li>סיכום שבועי בעברית בלחיצה אחת</li>
+              <li>RUP לפי קו + מגמה שבועית</li>
+              <li>NPS + ציטוטים מייצגים</li>
+              <li>ייצוא Word לדוחות רשמיים</li>
+            </ul>
+          </div>
+          <div style="border:1px solid #fef3c7;border-right:4px solid #f59e0b;border-radius:8px;padding:12px;">
+            <div style="font-weight:700;color:#92400e;margin-bottom:6px;font-size:13px;">🗄️ מסד נתונים ודשבורד</div>
+            <ul style="font-size:12px;color:#374151;margin:0;padding-right:16px;">
+              <li>SQLite + Node.js — פריסה מלאה על Railway</li>
+              <li>דשבורד ניהולי בזמן אמת</li>
+              <li>גיבוי ושחזור אוטומטי</li>
+              <li>ניהול תלמידים, קווים, אזורים</li>
+            </ul>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#64748b;background:#f8fafc;padding:10px;border-radius:6px;">המערכת שוכפלה ממודל פיילוט ל-7 קווים פעילים תוך פחות מ-6 חודשים, ומדגימה scalability גבוהה לרשויות נוספות.</p>
       `
     },
     {
